@@ -969,25 +969,41 @@ function shuffleAnagramPool() {
 }
 
 /**
- * Scramble input letters and put them in the output text area
+ * Scramble input letters and put them in the output text area, maintaining spaces
  */
 function scrambleInputToOutput() {
     const input = elements.textInput.value || '';
-    const chars = [];
+    const nonSpaceChars = [];
+    
+    // Collect all non-space letters/digits
     for (let i = 0; i < input.length; i++) {
         const char = input[i];
         if (/[a-zA-Z0-9æøåÆØÅäöÄÖ]/.test(char)) {
-            chars.push(char);
+            nonSpaceChars.push(char);
         }
     }
     
-    // Fisher-Yates Shuffle
-    for (let i = chars.length - 1; i > 0; i--) {
+    // Fisher-Yates Shuffle on non-space chars
+    for (let i = nonSpaceChars.length - 1; i > 0; i--) {
         const j = Math.floor(Math.random() * (i + 1));
-        [chars[i], chars[j]] = [chars[j], chars[i]];
+        [nonSpaceChars[i], nonSpaceChars[j]] = [nonSpaceChars[j], nonSpaceChars[i]];
     }
     
-    elements.textOutput.value = chars.join('');
+    // Reconstruct string maintaining space positions
+    const result = [];
+    let nonSpaceIndex = 0;
+    for (let i = 0; i < input.length; i++) {
+        const char = input[i];
+        if (/\s/.test(char)) {
+            result.push(char);
+        } else if (/[a-zA-Z0-9æøåÆØÅäöÄÖ]/.test(char)) {
+            result.push(nonSpaceChars[nonSpaceIndex++]);
+        } else {
+            result.push(char);
+        }
+    }
+    
+    elements.textOutput.value = result.join('');
     elements.textOutput.dispatchEvent(new Event('input'));
 }
 
