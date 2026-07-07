@@ -20,7 +20,8 @@ const state = {
     mode: 'encode',
     retainPunctuation: true,
     showProcess: true,
-    history: []
+    history: [],
+    anagramShuffledLetters: []
 };
 
 // DOM Elements
@@ -39,6 +40,7 @@ const elements = {
     paramScandicaesar: document.getElementById('param-scandicaesar'),
     paramVigenere: document.getElementById('param-vigenere'),
     paramRailfence: document.getElementById('param-railfence'),
+    paramAnagram: document.getElementById('param-anagram'),
     paramNone: document.getElementById('param-none'),
     
     caesarShift: document.getElementById('caesar-shift'),
@@ -48,6 +50,10 @@ const elements = {
     scandicaesarLang: document.getElementById('scandicaesar-lang'),
     vigenereKey: document.getElementById('vigenere-key'),
     railfenceRails: document.getElementById('railfence-rails'),
+    
+    anagramPool: document.getElementById('anagram-pool'),
+    btnShuffleAnagram: document.getElementById('btn-shuffle-anagram'),
+    anagramStatus: document.getElementById('anagram-status'),
     
     textInput: document.getElementById('text-input'),
     textOutput: document.getElementById('text-output'),
@@ -197,9 +203,18 @@ function showActiveParameterGroup() {
     elements.paramScandicaesar.classList.remove('active-param');
     elements.paramVigenere.classList.remove('active-param');
     elements.paramRailfence.classList.remove('active-param');
+    elements.paramAnagram.classList.remove('active-param');
     elements.paramNone.classList.remove('active-param');
 
-    // Show correct one
+    // Show correct one and handle output textarea readonly status
+    if (state.cipher === 'anagram') {
+        elements.textOutput.readOnly = false;
+        elements.textOutput.placeholder = "Type your anagram here or click tiles above...";
+    } else {
+        elements.textOutput.readOnly = true;
+        elements.textOutput.placeholder = "Ciphertext output will appear here...";
+    }
+
     switch (state.cipher) {
         case 'caesar':
             elements.paramCaesar.classList.add('active-param');
@@ -212,6 +227,9 @@ function showActiveParameterGroup() {
             break;
         case 'railfence':
             elements.paramRailfence.classList.add('active-param');
+            break;
+        case 'anagram':
+            elements.paramAnagram.classList.add('active-param');
             break;
         default:
             elements.paramNone.classList.add('active-param');
@@ -307,6 +325,17 @@ function bindEvents() {
         elements.inputStats.textContent = `${elements.textInput.value.length} characters`;
         runConversion();
         triggerHistoryAutoSave();
+    });
+
+    elements.textOutput.addEventListener('input', () => {
+        elements.outputStats.textContent = `${elements.textOutput.value.length} characters`;
+        if (state.cipher === 'anagram') {
+            runConversion();
+        }
+    });
+
+    elements.btnShuffleAnagram.addEventListener('click', () => {
+        shuffleAnagramPool();
     });
 
     // Paste Action
@@ -447,6 +476,64 @@ function runConversion() {
         elements.textOutput.value = '';
         elements.outputStats.textContent = '0 characters';
         renderProcessPlaceholder();
+        return;
+    }
+
+    if (state.cipher === 'anagram') {
+        updateAnagramSourceLetters();
+        renderAnagramPool();
+        
+        const sourceCounts = {};
+        for (const charInfo of state.anagramShuffledLetters) {
+            const c = charInfo.char.toLowerCase();
+            sourceCounts[c] = (sourceCounts[c] || 0) + 1;
+        }
+        
+        const outputText = elements.textOutput.value || '';
+        const usedCounts = {};
+        for (const char of outputText.toLowerCase()) {
+            if (/[a-z0-9æøåäö]/.test(char)) {
+                usedCounts[char] = (usedCounts[char] || 0) + 1;
+            }
+        }
+        
+        const remainingList = [];
+        const excessList = [];
+        const tempSource = { ...sourceCounts };
+        
+        for (const [char, count] of Object.entries(usedCounts)) {
+            if (tempSource[char]) {
+                const matched = Math.min(tempSource[char], count);
+                tempSource[char] -= matched;
+                if (count > matched) {
+                    excessList.push(`${char.toUpperCase()} (x${count - matched})`);
+                }
+            } else {
+                excessList.push(`${char.toUpperCase()} (x${count})`);
+            }
+        }
+        
+        for (const [char, count] of Object.entries(tempSource)) {
+            if (count > 0) {
+                remainingList.push(`${char.toUpperCase()} (x${count})`);
+            }
+        }
+        
+        const totalUsed = Object.values(usedCounts).reduce((a, b) => a + b, 0);
+        const logContent = `Mode: Anagram Helper\n\n` +
+            `Source Characters Pool:\n` +
+            (state.anagramShuffledLetters.length > 0 ? state.anagramShuffledLetters.map(l => l.char).join(' ') : 'None') + '\n\n' +
+            `Used Characters:  ${totalUsed}\n` +
+            `Remaining:        ${remainingList.join(', ') || 'None'}\n` +
+            `Excess/Invalid:   ${excessList.join(', ') || 'None'}`;
+            
+        renderProcessLog({
+            success: true,
+            content: logContent,
+            steps: []
+        });
+        
+        elements.outputStats.textContent = `${outputText.length} characters`;
         return;
     }
 
@@ -736,6 +823,141 @@ function escapeHtml(str) {
 /**
  * Register Service Worker for offline capability
  */
+/**
+ * Helper to update Anagram source letter pool
+ */
+function updateAnagramSourceLetters() {
+    const inputText = elements.textInput.value || '';
+    const letters = [];
+    for (let i = 0; i < inputText.length; i++) {
+        const char = inputText[i];
+        if (/[a-zA-Z0-9æøåÆØÅäöÄÖ]/.test(char)) {
+            letters.push({
+                id: i,
+                char: char
+            });
+        }
+    }
+    
+    // Sort to compare contents
+    const currentChars = state.anagramShuffledLetters.map(l => l.char).sort().join('');
+    const newChars = letters.map(l => l.char).sort().join('');
+    
+    if (currentChars !== newChars) {
+        state.anagramShuffledLetters = letters;
+    }
+}
+
+/**
+ * Render the Anagram letter inventory tiles
+ */
+function renderAnagramPool() {
+    elements.anagramPool.innerHTML = '';
+    
+    if (state.anagramShuffledLetters.length === 0) {
+        elements.anagramPool.innerHTML = '<div style="color: rgba(255,255,255,0.4); font-size:12px;">No letters available. Enter input text first.</div>';
+        return;
+    }
+    
+    // Count how many copies of each letter are used in output
+    const outputText = elements.textOutput.value || '';
+    const usedCounts = {};
+    for (const char of outputText.toLowerCase()) {
+        if (/[a-z0-9æøåäö]/.test(char)) {
+            usedCounts[char] = (usedCounts[char] || 0) + 1;
+        }
+    }
+    
+    const tempUsed = { ...usedCounts };
+    
+    state.anagramShuffledLetters.forEach((charInfo) => {
+        const tile = document.createElement('div');
+        tile.className = 'anagram-tile';
+        tile.textContent = charInfo.char;
+        
+        const key = charInfo.char.toLowerCase();
+        if (tempUsed[key] && tempUsed[key] > 0) {
+            tile.classList.add('used');
+            tempUsed[key]--;
+        }
+        
+        // Append letter on click
+        tile.addEventListener('click', () => {
+            elements.textOutput.value += charInfo.char;
+            elements.textOutput.dispatchEvent(new Event('input'));
+        });
+        
+        elements.anagramPool.appendChild(tile);
+    });
+    
+    updateAnagramStatus(usedCounts);
+}
+
+/**
+ * Update Anagram status alerts
+ */
+function updateAnagramStatus(usedCounts) {
+    const inputText = elements.textInput.value || '';
+    
+    // Get source counts
+    const sourceCounts = {};
+    let totalSourceLetters = 0;
+    for (const char of inputText.toLowerCase()) {
+        if (/[a-z0-9æøåäö]/.test(char)) {
+            sourceCounts[char] = (sourceCounts[char] || 0) + 1;
+            totalSourceLetters++;
+        }
+    }
+    
+    if (totalSourceLetters === 0) {
+        elements.anagramStatus.innerHTML = '<i data-lucide="info" style="width: 14px; height: 14px;"></i> Enter some text in the input box to start.';
+        if (window.lucide) window.lucide.createIcons();
+        return;
+    }
+    
+    let totalUsedLetters = 0;
+    let hasExcess = false;
+    
+    for (const [char, count] of Object.entries(usedCounts)) {
+        totalUsedLetters += count;
+        if (!sourceCounts[char] || count > sourceCounts[char]) {
+            hasExcess = true;
+        }
+    }
+    
+    if (hasExcess) {
+        elements.anagramStatus.innerHTML = '<i data-lucide="alert-triangle" style="width: 14px; height: 14px; color: #ef4444;"></i> Invalid: Contains extra or incorrect letters!';
+        elements.anagramStatus.style.borderColor = 'rgba(239, 68, 68, 0.3)';
+        elements.anagramStatus.style.color = '#ef4444';
+    } else if (totalUsedLetters === totalSourceLetters) {
+        elements.anagramStatus.innerHTML = '<i data-lucide="check-circle" style="width: 14px; height: 14px; color: #10b981;"></i> Perfect Anagram!';
+        elements.anagramStatus.style.borderColor = 'rgba(16, 185, 129, 0.3)';
+        elements.anagramStatus.style.color = '#10b981';
+    } else {
+        const remaining = totalSourceLetters - totalUsedLetters;
+        elements.anagramStatus.innerHTML = `<i data-lucide="info" style="width: 14px; height: 14px; color: #f59e0b;"></i> Valid so far. ${remaining} letter${remaining > 1 ? 's' : ''} remaining.`;
+        elements.anagramStatus.style.borderColor = 'rgba(245, 158, 11, 0.3)';
+        elements.anagramStatus.style.color = '#f59e0b';
+    }
+    
+    if (window.lucide) {
+        window.lucide.createIcons();
+    }
+}
+
+/**
+ * Shuffle the anagram pool
+ */
+function shuffleAnagramPool() {
+    const letters = [...state.anagramShuffledLetters];
+    for (let i = letters.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [letters[i], letters[j]] = [letters[j], letters[i]];
+    }
+    state.anagramShuffledLetters = letters;
+    renderAnagramPool();
+}
+
 function registerServiceWorker() {
     if ('serviceWorker' in navigator) {
         window.addEventListener('load', () => {
