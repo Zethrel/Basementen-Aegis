@@ -13,7 +13,6 @@ import {
     BinaryReverse,
     ScandiCaesar
 } from './ciphers.js';
-import { COMMON_WORDS } from './dictionary.js';
 
 // Application State
 const state = {
@@ -29,6 +28,7 @@ const elements = {
     // Navigation
     cipherBtns: document.querySelectorAll('.cipher-select-btn'),
     // Modes
+    modeSelector: document.querySelector('.mode-selector'),
     modeEncode: document.getElementById('mode-encode'),
     modeDecode: document.getElementById('mode-decode'),
     // Option Toggles
@@ -51,7 +51,6 @@ const elements = {
     vigenereKey: document.getElementById('vigenere-key'),
     railfenceRails: document.getElementById('railfence-rails'),
     
-    anagramSuggestions: document.getElementById('anagram-suggestions'),
     btnShuffleOutput: document.getElementById('btn-shuffle-output'),
     
     textInput: document.getElementById('text-input'),
@@ -207,25 +206,20 @@ function showActiveParameterGroup() {
 
     // Show correct one and handle output panel layout based on state
     if (state.cipher === 'anagram') {
-        if (state.mode === 'encode') {
-            elements.textOutput.classList.remove('hidden');
-            elements.anagramSuggestions.classList.add('hidden');
-            elements.textOutput.readOnly = false;
-            elements.textOutput.placeholder = "Type your anagram here...";
-            elements.btnShuffleOutput.classList.remove('hidden');
-            // Auto-scramble on first load if output is empty
-            if (!elements.textOutput.value && elements.textInput.value) {
-                scrambleInputToOutput();
-            }
-        } else {
-            // Decrypt Mode: Solver layout
-            elements.textOutput.classList.add('hidden');
-            elements.anagramSuggestions.classList.remove('hidden');
-            elements.btnShuffleOutput.classList.add('hidden');
+        state.mode = 'encode';
+        elements.modeEncode.classList.add('active');
+        elements.modeDecode.classList.remove('active');
+        elements.modeSelector.classList.add('hidden');
+        
+        elements.textOutput.readOnly = false;
+        elements.textOutput.placeholder = "Type your anagram here...";
+        elements.btnShuffleOutput.classList.remove('hidden');
+        // Auto-scramble on first load if output is empty
+        if (!elements.textOutput.value && elements.textInput.value) {
+            scrambleInputToOutput();
         }
     } else {
-        elements.textOutput.classList.remove('hidden');
-        elements.anagramSuggestions.classList.add('hidden');
+        elements.modeSelector.classList.remove('hidden');
         elements.textOutput.readOnly = true;
         elements.textOutput.placeholder = "Ciphertext output will appear here...";
         elements.btnShuffleOutput.classList.add('hidden');
@@ -504,140 +498,24 @@ function runConversion() {
         const cleanInput = input.toLowerCase();
         
         // Count letters in the input
-        const inputCounts = {};
         let inputLetterCount = 0;
         for (const char of cleanInput) {
             if (/[a-z0-9æøåäö]/.test(char)) {
-                inputCounts[char] = (inputCounts[char] || 0) + 1;
                 inputLetterCount++;
             }
         }
         
-        if (state.mode === 'encode') {
-            const totalUsed = inputLetterCount;
-            const logContent = `Mode: Anagram Helper (Encrypt)\n\n` +
-                `Input Text:  "${input}"\n` +
-                `Letters count: ${totalUsed}\n\n` +
-                `Edit the output panel directly or click the Shuffle icon in the header to randomize.`;
-            renderProcessLog({
-                success: true,
-                content: logContent,
-                steps: []
-            });
-            return;
-        }
-        
-        // Decrypt Mode (Anagram Solver)
-        const matches = [];
-        for (const word of COMMON_WORDS) {
-            const wordLower = word.toLowerCase();
-            if (wordLower.length > inputLetterCount || wordLower.length < 3) continue;
-            
-            const wordCounts = {};
-            let isPossible = true;
-            for (const char of wordLower) {
-                wordCounts[char] = (wordCounts[char] || 0) + 1;
-                if (!inputCounts[char] || wordCounts[char] > inputCounts[char]) {
-                    isPossible = false;
-                    break;
-                }
-            }
-            if (isPossible) {
-                matches.push(wordLower);
-            }
-        }
-        
-        // Group matches by length
-        const groups = {};
-        for (const word of matches) {
-            const len = word.length;
-            if (!groups[len]) groups[len] = [];
-            if (!groups[len].includes(word)) {
-                groups[len].push(word);
-            }
-        }
-        
-        // Generate 3 random shuffles
-        const shuffles = [];
-        for (let s = 0; s < 3; s++) {
-            shuffles.push(generateScrambleString(input));
-        }
-        
-        // Build suggestions HTML
-        let html = '';
-        
-        // Section 1: Scrambled Variations
-        html += `
-            <div style="margin-bottom: 8px;">
-                <h4 style="font-size: 13px; font-weight: 600; color: #3b82f6; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 10px; margin-top: 0; display: flex; align-items: center; gap: 6px;">
-                    <i data-lucide="shuffle" style="width: 14px; height: 14px;"></i> Inspiration Variations
-                </h4>
-                <div style="display: flex; flex-direction: column; gap: 8px;">
-        `;
-        shuffles.forEach(shuf => {
-            html += `
-                <div style="padding: 10px 12px; background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.06); border-radius: 6px; font-family: monospace; font-size: 14px; letter-spacing: 0.05em; color: var(--color-text-primary); display: flex; justify-content: space-between; align-items: center;">
-                    <span>${shuf}</span>
-                    <button class="icon-btn-sm" style="background: none; border: none; cursor: pointer; color: rgba(255,255,255,0.4);" onclick="navigator.clipboard.writeText('${shuf.replace(/'/g, "\\'")}')" title="Copy variation">
-                        <i data-lucide="copy" style="width: 12px; height: 12px;"></i>
-                    </button>
-                </div>
-            `;
-        });
-        html += `
-                </div>
-            </div>
-        `;
-        
-        // Section 2: Word Suggestions
-        html += `
-            <div>
-                <h4 style="font-size: 13px; font-weight: 600; color: #10b981; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 10px; margin-top: 0; display: flex; align-items: center; gap: 6px;">
-                    <i data-lucide="book-open" style="width: 14px; height: 14px;"></i> Common Word Matches
-                </h4>
-        `;
-        
-        const sortedLengths = Object.keys(groups).map(Number).sort((a, b) => b - a);
-        
-        if (sortedLengths.length === 0) {
-            html += `<p style="font-size: 12px; color: rgba(255,255,255,0.4); font-style: italic; margin: 0;">No common words can be formed from these letters.</p>`;
-        } else {
-            html += `<div style="display: flex; flex-direction: column; gap: 12px;">`;
-            sortedLengths.forEach(len => {
-                const words = groups[len].sort();
-                html += `
-                    <div style="padding: 10px 12px; background: rgba(255,255,255,0.02); border: 1px solid rgba(255,255,255,0.04); border-radius: 6px;">
-                        <span style="font-size: 11px; font-weight: 700; color: rgba(255,255,255,0.4); text-transform: uppercase; display: block; margin-bottom: 6px;">${len}-Letter Words</span>
-                        <div style="display: flex; flex-wrap: wrap; gap: 6px;">
-                `;
-                words.forEach(word => {
-                    html += `<span style="font-size: 13px; padding: 3px 8px; background: rgba(16, 185, 129, 0.1); border: 1px solid rgba(16, 185, 129, 0.2); border-radius: 4px; color: #10b981; font-family: monospace;">${word}</span>`;
-                });
-                html += `
-                        </div>
-                    </div>
-                `;
-            });
-            html += `</div>`;
-        }
-        html += `</div>`;
-        
-        elements.anagramSuggestions.innerHTML = html;
-        if (window.lucide) window.lucide.createIcons();
-        
-        const logContent = `Mode: Anagram Helper (Decrypt)\n\n` +
-            `Scrambled Input: "${input}"\n` +
-            `Available Letters: ${inputLetterCount}\n\n` +
-            `Anagram solving completed successfully.\n` +
-            `Found ${matches.length} possible dictionary word matches.`;
-            
+        const logContent = `Mode: Anagram Helper\n\n` +
+            `Input Text:  "${input}"\n` +
+            `Letters count: ${inputLetterCount}\n\n` +
+            `Edit the output panel directly or click the Shuffle icon in the header to randomize.`;
         renderProcessLog({
             success: true,
             content: logContent,
             steps: []
         });
         
-        elements.outputStats.textContent = `${matches.length} matches found`;
+        elements.outputStats.textContent = `${elements.textOutput.value.length} characters`;
         return;
     }
 

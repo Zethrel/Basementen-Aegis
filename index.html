@@ -59,48 +59,48 @@
             <aside class="cipher-sidebar">
                 <h2 class="section-title">Select Cipher</h2>
                 <nav class="cipher-nav">
-                    <button class="cipher-select-btn active" data-cipher="caesar">
-                        <i data-lucide="key-round"></i>
-                        <span class="cipher-name">Caesar Cipher</span>
+                    <button class="cipher-select-btn" data-cipher="a1z26">
+                        <i data-lucide="hash"></i>
+                        <span class="cipher-name">A1Z26 Cipher</span>
                     </button>
-                    <button class="cipher-select-btn" data-cipher="scandicaesar">
-                        <i data-lucide="globe"></i>
-                        <span class="cipher-name">Scandi Caesar</span>
-                        <span class="badge-custom" style="background: rgba(16, 185, 129, 0.2); color: #10b981;">Scandi</span>
-                    </button>
-                    <button class="cipher-select-btn" data-cipher="rot13">
-                        <i data-lucide="refresh-cw"></i>
-                        <span class="cipher-name">ROT13 Cipher</span>
+                    <button class="cipher-select-btn" data-cipher="anagram">
+                        <i data-lucide="shuffle"></i>
+                        <span class="cipher-name">Anagram Helper</span>
+                        <span class="badge-custom" style="background: rgba(59, 130, 246, 0.2); color: #3b82f6;">Helper</span>
                     </button>
                     <button class="cipher-select-btn" data-cipher="atbash">
                         <i data-lucide="shuffle"></i>
                         <span class="cipher-name">Atbash Cipher</span>
                     </button>
-                    <button class="cipher-select-btn" data-cipher="vigenere">
-                        <i data-lucide="keyboard"></i>
-                        <span class="cipher-name">Vigenere Cipher</span>
-                    </button>
-                    <button class="cipher-select-btn" data-cipher="railfence">
-                        <i data-lucide="rows"></i>
-                        <span class="cipher-name">Rail Fence</span>
-                    </button>
                     <button class="cipher-select-btn" data-cipher="binary">
                         <i data-lucide="binary"></i>
                         <span class="cipher-name">Binary Converter</span>
-                    </button>
-                    <button class="cipher-select-btn" data-cipher="a1z26">
-                        <i data-lucide="hash"></i>
-                        <span class="cipher-name">A1Z26 Cipher</span>
                     </button>
                     <button class="cipher-select-btn" data-cipher="binreverse">
                         <i data-lucide="lock"></i>
                         <span class="cipher-name">Binary Reverse</span>
                         <span class="badge-custom">Custom</span>
                     </button>
-                    <button class="cipher-select-btn" data-cipher="anagram">
-                        <i data-lucide="shuffle"></i>
-                        <span class="cipher-name">Anagram Helper</span>
-                        <span class="badge-custom" style="background: rgba(59, 130, 246, 0.2); color: #3b82f6;">Helper</span>
+                    <button class="cipher-select-btn active" data-cipher="caesar">
+                        <i data-lucide="key-round"></i>
+                        <span class="cipher-name">Caesar Cipher</span>
+                    </button>
+                    <button class="cipher-select-btn" data-cipher="railfence">
+                        <i data-lucide="rows"></i>
+                        <span class="cipher-name">Rail Fence</span>
+                    </button>
+                    <button class="cipher-select-btn" data-cipher="rot13">
+                        <i data-lucide="refresh-cw"></i>
+                        <span class="cipher-name">ROT13 Cipher</span>
+                    </button>
+                    <button class="cipher-select-btn" data-cipher="scandicaesar">
+                        <i data-lucide="globe"></i>
+                        <span class="cipher-name">Scandi Caesar</span>
+                        <span class="badge-custom" style="background: rgba(16, 185, 129, 0.2); color: #10b981;">Scandi</span>
+                    </button>
+                    <button class="cipher-select-btn" data-cipher="vigenere">
+                        <i data-lucide="keyboard"></i>
+                        <span class="cipher-name">Vigenere Cipher</span>
                     </button>
                 </nav>
             </aside>
@@ -158,8 +158,7 @@
                         <div class="param-group" id="param-anagram">
                             <div style="font-size: 0.85rem; color: var(--color-text-secondary); line-height: 1.4; display: flex; flex-direction: column; gap: 8px;">
                                 <p style="font-weight: 600; color: #3b82f6; display: flex; align-items: center; gap: 6px; margin: 0;"><i data-lucide="info" style="width: 14px; height: 14px;"></i> Anagram Helper Guide</p>
-                                <p style="margin: 0;"><strong>Encrypt Mode:</strong> Scrambles your input text into the output box. Click the <strong>Shuffle</strong> icon in the output header to randomize them again.</p>
-                                <p style="margin: 0;"><strong>Decrypt Mode:</strong> Solves your scrambled letters. Displays real English word matches and dynamic layout variations in the output area.</p>
+                                <p style="margin: 0;">Scrambles your input text into the output box while preserving spaces. Click the <strong>Shuffle</strong> icon in the output header to randomize the letters again.</p>
                             </div>
                         </div>
 
@@ -221,10 +220,6 @@
                             </div>
                         </div>
                         <textarea id="text-output" readonly placeholder="Output will appear here..."></textarea>
-                        <!-- Custom suggestions container for Anagram Solver -->
-                        <div id="anagram-suggestions" class="hidden" style="flex: 1; overflow-y: auto; padding: 14px; background: rgba(255, 255, 255, 0.01); border-radius: 6px; border: 1px solid rgba(255, 255, 255, 0.04); display: flex; flex-direction: column; gap: 16px;">
-                            <!-- Dynamic contents will be injected here -->
-                        </div>
                         <div class="panel-footer">
                             <span id="output-stats">0 characters</span>
                         </div>
