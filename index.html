@@ -1,0 +1,296 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Starlight Cipher Suite - Premium Offline Cryptography</title>
+    
+    <!-- SEO Meta Tags -->
+    <meta name="description" content="A premium offline-first cipher tool supporting Caesar, ROT13, Atbash, Vigenere, Rail Fence, Binary, A1Z26, and a custom Binary Reverse cipher with process visualization.">
+    <meta name="theme-color" content="#0f172a">
+    
+    <!-- PWA Manifest -->
+    <link rel="manifest" href="manifest.json">
+    <link rel="icon" href="icon.svg" type="image/svg+xml">
+    <link rel="apple-touch-icon" href="icon.svg">
+    
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;700&family=Outfit:wght@300;400;600;800&display=swap" rel="stylesheet">
+    
+    <!-- Stylesheet -->
+    <link rel="stylesheet" href="styles.css">
+    
+    <!-- Lucide Icons CDN -->
+    <script src="https://unpkg.com/lucide@latest"></script>
+</head>
+<body>
+    <div class="app-container">
+        <!-- HEADER -->
+        <header class="app-header">
+            <div class="header-logo">
+                <i data-lucide="shield-alert" class="logo-icon"></i>
+                <div class="logo-text">
+                    <h1>Starlight</h1>
+                    <p class="logo-subtitle">Cipher Suite</p>
+                </div>
+            </div>
+            <div class="header-actions">
+                <button id="mobile-btn" class="btn btn-secondary">
+                    <i data-lucide="qr-code"></i>
+                    <span>Mobile App</span>
+                </button>
+                <button id="install-btn" class="btn btn-primary btn-install hidden">
+                    <i data-lucide="download"></i>
+                    <span>Install App</span>
+                </button>
+                <div class="connection-badge offline" id="connection-status">
+                    <span class="badge-dot"></span>
+                    <span id="connection-text">Offline Mode</span>
+                </div>
+            </div>
+        </header>
+
+        <!-- MAIN LAYOUT -->
+        <main class="app-layout">
+            
+            <!-- SIDEBAR: CIPHER SELECTION -->
+            <aside class="cipher-sidebar">
+                <h2 class="section-title">Select Cipher</h2>
+                <nav class="cipher-nav">
+                    <button class="cipher-select-btn active" data-cipher="caesar">
+                        <i data-lucide="key-round"></i>
+                        <span class="cipher-name">Caesar Cipher</span>
+                    </button>
+                    <button class="cipher-select-btn" data-cipher="scandicaesar">
+                        <i data-lucide="globe"></i>
+                        <span class="cipher-name">Scandi Caesar</span>
+                        <span class="badge-custom" style="background: rgba(16, 185, 129, 0.2); color: #10b981;">Scandi</span>
+                    </button>
+                    <button class="cipher-select-btn" data-cipher="rot13">
+                        <i data-lucide="refresh-cw"></i>
+                        <span class="cipher-name">ROT13 Cipher</span>
+                    </button>
+                    <button class="cipher-select-btn" data-cipher="atbash">
+                        <i data-lucide="shuffle"></i>
+                        <span class="cipher-name">Atbash Cipher</span>
+                    </button>
+                    <button class="cipher-select-btn" data-cipher="vigenere">
+                        <i data-lucide="keyboard"></i>
+                        <span class="cipher-name">Vigenere Cipher</span>
+                    </button>
+                    <button class="cipher-select-btn" data-cipher="railfence">
+                        <i data-lucide="rows"></i>
+                        <span class="cipher-name">Rail Fence</span>
+                    </button>
+                    <button class="cipher-select-btn" data-cipher="binary">
+                        <i data-lucide="binary"></i>
+                        <span class="cipher-name">Binary Converter</span>
+                    </button>
+                    <button class="cipher-select-btn" data-cipher="a1z26">
+                        <i data-lucide="hash"></i>
+                        <span class="cipher-name">A1Z26 Cipher</span>
+                    </button>
+                    <button class="cipher-select-btn" data-cipher="binreverse">
+                        <i data-lucide="lock"></i>
+                        <span class="cipher-name">Binary Reverse</span>
+                        <span class="badge-custom">Custom</span>
+                    </button>
+                </nav>
+            </aside>
+
+            <!-- WORKSPACE -->
+            <section class="workspace">
+                
+                <!-- TOP CONTROLS: MODE & CIPHER PARAMS -->
+                <div class="control-panel glass">
+                    <div class="mode-selector">
+                        <button id="mode-encode" class="mode-btn active" data-mode="encode">
+                            <i data-lucide="lock"></i> Encode
+                        </button>
+                        <button id="mode-decode" class="mode-btn" data-mode="decode">
+                            <i data-lucide="unlock"></i> Decode
+                        </button>
+                    </div>
+
+                    <!-- Dynamic Parameters Container -->
+                    <div class="cipher-params">
+                        <!-- Caesar Shift Key -->
+                        <div class="param-group active-param" id="param-caesar">
+                            <label for="caesar-shift">Shift Key (0-25): <span id="shift-value">3</span></label>
+                            <input type="range" id="caesar-shift" min="0" max="25" value="3" class="range-slider">
+                        </div>
+
+                        <!-- Scandi Caesar Shift Key & Lang -->
+                        <div class="param-group" id="param-scandicaesar">
+                            <div style="margin-bottom: 12px;">
+                                <label for="scandicaesar-lang">Scandi Variant:</label>
+                                <select id="scandicaesar-lang" class="select-dropdown">
+                                    <option value="dk-no">Danish & Norwegian (A-Z + Æ, Ø, Å)</option>
+                                    <option value="se">Swedish (A-Z + Å, Ä, Ö)</option>
+                                </select>
+                            </div>
+                            <div>
+                                <label for="scandicaesar-shift">Shift Key (0-28): <span id="scandicaesar-shift-value">3</span></label>
+                                <input type="range" id="scandicaesar-shift" min="0" max="28" value="3" class="range-slider">
+                            </div>
+                        </div>
+
+                        <!-- Vigenere Key -->
+                        <div class="param-group" id="param-vigenere">
+                            <label for="vigenere-key">Keyword:</label>
+                            <input type="text" id="vigenere-key" value="KEY" placeholder="Letters only" maxlength="30" class="input-text">
+                        </div>
+
+                        <!-- Rail Fence Key -->
+                        <div class="param-group" id="param-railfence">
+                            <label for="railfence-rails">Number of Rails (2-10):</label>
+                            <input type="number" id="railfence-rails" value="3" min="2" max="10" class="input-number">
+                        </div>
+
+                        <!-- Custom Binary Reverse Width Mode -->
+                        <div class="param-group" id="param-binreverse">
+                            <label for="binreverse-mode">Bit Width Mode:</label>
+                            <select id="binreverse-mode" class="select-dropdown">
+                                <option value="fixed">Fixed Width (5-bit, continuous)</option>
+                                <option value="variable">Variable Width (space separated)</option>
+                            </select>
+                        </div>
+
+                        <!-- Info placeholder for simple ciphers (Atbash, Rot13, Binary, A1Z26) -->
+                        <div class="param-group" id="param-none">
+                            <span class="info-text">No parameter configuration required for this cipher.</span>
+                        </div>
+                    </div>
+
+                    <!-- General Options -->
+                    <div class="general-options">
+                        <label class="toggle-option">
+                            <input type="checkbox" id="option-punctuation" checked>
+                            <span class="slider"></span>
+                            <span class="option-label">Retain Punctuation</span>
+                        </label>
+                        <label class="toggle-option">
+                            <input type="checkbox" id="option-process" checked>
+                            <span class="slider"></span>
+                            <span class="option-label">Show Process</span>
+                        </label>
+                    </div>
+                </div>
+
+                <!-- IO TEXT CONSOLE -->
+                <div class="text-console">
+                    <!-- INPUT PANEL -->
+                    <div class="console-panel glass">
+                        <div class="panel-header">
+                            <h3>Plaintext Input</h3>
+                            <div class="header-buttons">
+                                <button id="btn-paste" class="icon-btn" title="Paste text">
+                                    <i data-lucide="clipboard"></i>
+                                </button>
+                                <button id="btn-clear" class="icon-btn" title="Clear text">
+                                    <i data-lucide="trash-2"></i>
+                                </button>
+                            </div>
+                        </div>
+                        <textarea id="text-input" placeholder="Type or paste your text here..." autofocus></textarea>
+                        <div class="panel-footer">
+                            <span id="input-stats">0 characters</span>
+                        </div>
+                    </div>
+
+                    <!-- OUTPUT PANEL -->
+                    <div class="console-panel glass">
+                        <div class="panel-header">
+                            <h3>Ciphertext Output</h3>
+                            <div class="header-buttons">
+                                <button id="btn-copy" class="icon-btn" title="Copy output">
+                                    <i data-lucide="copy"></i>
+                                </button>
+                            </div>
+                        </div>
+                        <textarea id="text-output" readonly placeholder="Output will appear here..."></textarea>
+                        <div class="panel-footer">
+                            <span id="output-stats">0 characters</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- PROCESS VISUALIZATION -->
+                <div class="process-panel glass" id="process-section">
+                    <div class="panel-header">
+                        <h3><i data-lucide="trending-up"></i> Conversion Process Breakdown</h3>
+                    </div>
+                    <div class="process-content" id="process-log">
+                        <div class="placeholder-log">
+                            <i data-lucide="cpu" class="animate-pulse"></i>
+                            <p>Type some text above to see the step-by-step encoding process in real-time.</p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- HISTORY LOG -->
+                <div class="history-panel glass">
+                    <div class="panel-header">
+                        <h3><i data-lucide="history"></i> Recent Transactions</h3>
+                        <button id="btn-clear-history" class="btn btn-secondary btn-sm">
+                            <i data-lucide="x-circle"></i> Clear History
+                        </button>
+                    </div>
+                    <div class="history-list" id="history-items">
+                        <div class="placeholder-history">No history found. Transactions will be saved locally.</div>
+                    </div>
+                </div>
+
+            </section>
+        </main>
+        
+        <footer class="app-footer">
+            <p class="footer-credit">Created by <span class="credit-highlight">Zethrel - Argent Dawn EU</span></p>
+            <p>Starlight Cipher Suite • Running locally &amp; offline-ready.</p>
+        </footer>
+    </div>
+
+    <!-- MOBILE APP INSTALL MODAL -->
+    <div id="mobile-modal" class="modal-overlay hidden">
+        <div class="modal-content glass">
+            <div class="modal-header">
+                <h3><i data-lucide="smartphone"></i> Install on Mobile</h3>
+                <button id="close-modal-btn" class="icon-btn">&times;</button>
+            </div>
+            <div class="modal-body">
+                <p class="modal-desc">Scan this QR code with your mobile device to open and install the app instantly.</p>
+                
+                <!-- Dynamic QR Code Container -->
+                <div class="qr-container">
+                    <img id="qr-image" src="" alt="QR Code Link">
+                    <div class="qr-url" id="qr-url-text">http://localhost:8000</div>
+                </div>
+                
+                <!-- PC IP Configuration for Local Scanning -->
+                <div id="ip-config-container" class="ip-config-container hidden">
+                    <label for="local-ip-input"><i data-lucide="info"></i> Configure PC Local IP</label>
+                    <div class="ip-input-row">
+                        <input type="text" id="local-ip-input" placeholder="e.g. 192.168.1.100" class="input-text">
+                        <button id="btn-update-qr" class="btn btn-primary btn-sm">Update QR</button>
+                    </div>
+                    <p class="ip-help">Run <code>ipconfig</code> in Command Prompt to find your IPv4 Address.</p>
+                </div>
+                
+                <p class="modal-tip"><i data-lucide="help-circle"></i> <strong>Local Tip:</strong> If scanning from a phone, ensure both devices are on the same Wi-Fi network and access this app using your PC's IP address (e.g. <code>http://192.168.1.100:8000</code>) rather than <code>localhost</code>.</p>
+                
+                <div class="install-instructions" style="margin-top: 15px; font-size: 13px; color: rgba(255, 255, 255, 0.7); border-top: 1px solid rgba(255, 255, 255, 0.1); padding-top: 12px; line-height: 1.4;">
+                    <p style="margin-bottom: 8px; font-weight: 600; color: #10b981; display: flex; align-items: center; gap: 6px;"><i data-lucide="info" style="width: 16px; height: 16px;"></i> How to Install on Mobile:</p>
+                    <p style="margin-bottom: 6px;"><strong>iOS (Safari):</strong> Tap the <strong>Share</strong> button (square with arrow up) -> select <strong>"Add to Home Screen"</strong>.</p>
+                    <p><strong>Android (Chrome):</strong> Tap the <strong>three-dots menu</strong> -> select <strong>"Add to Home Screen"</strong>.</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+
+    <!-- Core App Module -->
+    <script type="module" src="app.js"></script>
+</body>
+</html>
