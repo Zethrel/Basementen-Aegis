@@ -14,12 +14,6 @@
       "sizes": "192x192 256x256 512x512",
       "type": "image/png",
       "purpose": "any maskable"
-    },
-    {
-      "src": "icon.svg?v=8",
-      "sizes": "any",
-      "type": "image/svg+xml",
-      "purpose": "any maskable"
     }
   ]
 }

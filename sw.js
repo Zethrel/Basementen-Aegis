@@ -1,4 +1,4 @@
-const CACHE_NAME = 'cipher-craft-v8';
+const CACHE_NAME = 'cipher-craft-v9';
 const ASSETS_TO_CACHE = [
   './',
   './index.html',
@@ -8,7 +8,6 @@ const ASSETS_TO_CACHE = [
   './manifest.json?v=8',
   './logo.png?v=8',
   './icon.png?v=8',
-  './icon.svg?v=8',
   'https://unpkg.com/lucide@latest'
 ];
 
