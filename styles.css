@@ -1081,7 +1081,13 @@ textarea {
     .app-layout {
         grid-template-columns: 1fr;
     }
-    
+
+    /* Grid items default to min-width auto, which lets the wide pill row
+       stretch the whole page; min-width 0 keeps scrolling inside .cipher-nav. */
+    .app-layout > * {
+        min-width: 0;
+    }
+
     .cipher-sidebar {
         border-bottom: 1px solid var(--border-glass);
         padding-bottom: 1rem;
