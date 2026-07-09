@@ -1,5 +1,5 @@
 /**
- * Starlight Cipher Suite - App Controller
+ * Basementen Aegis - App Controller
  */
 
 import {
@@ -1020,7 +1020,7 @@ function bindEvents() {
     };
 
     elements.mobileBtn.addEventListener('click', () => {
-        updateQrCode("https://kosejarl.github.io/starlight-cipher-suite/");
+        updateQrCode("https://zethrel.github.io/Basementen-Aegis/");
         openModal(elements.mobileModal);
     });
 

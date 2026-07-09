@@ -19,7 +19,7 @@ def resource_path(relative_path):
     return os.path.join(base_path, relative_path)
 
 # Setup file logging in the temp directory to help diagnose issues in windowed mode
-log_path = os.path.join(tempfile.gettempdir(), "starlight_cipher_suite.log")
+log_path = os.path.join(tempfile.gettempdir(), "basementen_aegis.log")
 try:
     log_file = open(log_path, "w", encoding="utf-8", buffering=1)
     sys.stdout = log_file
@@ -76,7 +76,7 @@ class LoggingTCPServer(socketserver.TCPServer):
 # Marker file so the trust prompt below only ever runs once per machine,
 # regardless of what the person chose.
 CERT_PROMPT_FLAG = os.path.join(
-    os.getenv('APPDATA', tempfile.gettempdir()), 'StarlightCipherSuite', 'cert_prompt_shown.flag'
+    os.getenv('APPDATA', tempfile.gettempdir()), 'BasementenAegis', 'cert_prompt_shown.flag'
 )
 
 def offer_certificate_trust():
@@ -88,7 +88,7 @@ def offer_certificate_trust():
     if os.path.exists(CERT_PROMPT_FLAG):
         return
 
-    cert_path = resource_path('StarlightRoot.cer')
+    cert_path = resource_path('AegisRoot.cer')
     if not os.path.exists(cert_path):
         log_err(f"Certificate not found at {cert_path}, skipping trust prompt.")
         return
@@ -98,14 +98,14 @@ def offer_certificate_trust():
     IDYES = 6
 
     message = (
-        'This copy of Starlight Cipher Suite is signed by "Zethrel - Argent Dawn EU".\n\n'
+        'This copy of Basementen Aegis is signed by "Zethrel".\n\n'
         "Install this certificate as a trusted publisher so Windows stops showing "
         "security warnings for it on this PC?\n\n"
         "You won't be asked again."
     )
     log("Prompting user for certificate trust decision.")
     choice = ctypes.windll.user32.MessageBoxW(
-        0, message, "Trust Starlight Cipher Suite?", MB_YESNO | MB_ICONQUESTION
+        0, message, "Trust Basementen Aegis?", MB_YESNO | MB_ICONQUESTION
     )
 
     if choice == IDYES:
@@ -136,13 +136,13 @@ def offer_certificate_trust():
 def main():
     global httpd, PORT
 
-    log("Initializing Starlight Cipher Suite Standalone Desktop Application")
+    log("Initializing Basementen Aegis Standalone Desktop Application")
     log(f"CWD: {os.getcwd()}")
     log(f"Resource path: {resource_path('.')}")
 
     # Check if files exist in the resource directory
-    expected_files = ['index.html', 'styles.css', 'app.js', 'ciphers.js', 'logo.png', 'icon.png',
-                       'lucide.min.js', 'qrcode.js', 'fonts/fonts.css', 'StarlightRoot.cer']
+    expected_files = ['index.html', 'styles.css', 'app.js', 'ciphers.js', 'sw.js', 'logo.png',
+                       'icon.png', 'lucide.min.js', 'qrcode.js', 'fonts/fonts.css', 'AegisRoot.cer']
     for file in expected_files:
         path = resource_path(file)
         exists = os.path.exists(path)
@@ -169,7 +169,7 @@ def main():
     # This avoids IPv6 DNS resolution issues with 'localhost' on Windows
     log(f"Creating webview window pointing to http://127.0.0.1:{PORT}")
     webview.create_window(
-        title="Starlight Cipher Suite",
+        title="Basementen Aegis",
         url=f"http://127.0.0.1:{PORT}",
         width=1200,
         height=800,

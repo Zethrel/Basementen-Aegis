@@ -1,5 +1,5 @@
 /**
- * Starlight Cipher Suite - Service Worker
+ * Basementen Aegis - Service Worker
  * Cache-first strategy: the app shell is precached on install so every load
  * (including fully offline) is served from cache. Updated files are fetched
  * in the background when a new service worker version installs; the page
@@ -9,7 +9,7 @@
  * the new build.
  */
 
-const CACHE_VERSION = 'starlight-v2';
+const CACHE_VERSION = 'aegis-v3';
 
 const PRECACHE_URLS = [
     './',

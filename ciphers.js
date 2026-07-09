@@ -1,5 +1,5 @@
 /**
- * Starlight Cipher Suite - Core Cipher Algorithms
+ * Basementen Aegis - Core Cipher Algorithms
  * All functions return an object: { result: string, steps: Array<{ title: string, content: string }> }
  */
 

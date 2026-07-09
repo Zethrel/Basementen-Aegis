@@ -3,4 +3,4 @@ dist/
 __pycache__/
 *.exe
 *.spec
-!StarlightCipherSuite.spec
+!BasementenAegis.spec

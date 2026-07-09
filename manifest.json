@@ -1,7 +1,7 @@
 {
-  "name": "Starlight Cipher Suite",
-  "short_name": "Starlight",
-  "description": "Offline-ready ciphers encoder and decoder featuring a premium dark dashboard and step-by-step process visualization.",
+  "name": "Basementen Aegis",
+  "short_name": "Aegis",
+  "description": "Basementen Aegis: offline-ready cipher encoder and decoder featuring a premium dark dashboard and step-by-step process visualization.",
   "start_url": "./index.html",
   "display": "standalone",
   "orientation": "any",

@@ -1,8 +1,10 @@
-# Starlight Cipher Suite
+# Basementen Aegis
 
 An offline-first cipher encoder/decoder with step-by-step process visualization. Runs as a static web page, an installable PWA, or a native desktop app — no data ever leaves your machine.
 
-Created by Zethrel — Argent Dawn EU, for the Starlight guild.
+Created by Zethrel.
+
+*Formerly known as Starlight Cipher Suite.*
 
 ## Ciphers
 
@@ -21,17 +23,25 @@ Plus **The Basementen** — a password-protected vault cipher. Messages are encr
 
 **Web:** open `index.html` directly, or serve the folder with any static file server.
 
-**Desktop (Windows, pre-built):** run `dist/StarlightCipherSuite.exe`. Requires the Edge WebView2 runtime (included by default on Windows 10/11).
+**Desktop (Windows, pre-built):** run `dist/BasementenAegis.exe`. Requires the Edge WebView2 runtime (included by default on Windows 10/11).
 
 **Desktop (build it yourself):**
 ```bash
 pip install pywebview pyinstaller
 # Windows also needs:
 pip install pythonnet
-
-python -m PyInstaller StarlightCipherSuite.spec --noconfirm
 ```
-The built app lands in `dist/`.
+```powershell
+# One-time (and after certificate expiry): create the 5-year signing
+# certificate and export AegisRoot.cer so the build can bundle it
+./sign_app.ps1
+
+python -m PyInstaller BasementenAegis.spec --noconfirm
+
+# Sign the freshly built executable with the same certificate
+./sign_app.ps1
+```
+The built app lands in `dist/`. Always build and sign on the same machine — the signing certificate lives in that machine's user certificate store, and a new machine would mint a new identity that users have to re-trust.
 
 ## Privacy
 
