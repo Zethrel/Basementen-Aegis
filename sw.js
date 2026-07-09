@@ -9,7 +9,7 @@
  * the new build.
  */
 
-const CACHE_VERSION = 'aegis-v11';
+const CACHE_VERSION = 'aegis-v12';
 
 const PRECACHE_URLS = [
     './',
@@ -32,6 +32,7 @@ const PRECACHE_URLS = [
     './fonts/outfit.woff2',
     './fonts/jetbrains-mono.woff2',
     './icon.png',
+    './icon-maskable.png',
     './logo.png'
 ];
 

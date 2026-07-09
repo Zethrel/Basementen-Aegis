@@ -16,6 +16,7 @@ datas = [
     ('sw.js', '.'),
     ('logo.png', '.'),
     ('icon.png', '.'),
+    ('icon-maskable.png', '.'),
     ('manifest.json', '.'),
     ('lucide.min.js', '.'),
     ('qrcode.js', '.'),

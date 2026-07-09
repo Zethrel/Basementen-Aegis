@@ -10,10 +10,16 @@
   "categories": ["utilities", "education"],
   "icons": [
     {
-      "src": "icon.png?v=10",
-      "sizes": "192x192 256x256 512x512",
+      "src": "icon.png?v=11",
+      "sizes": "512x512",
       "type": "image/png",
-      "purpose": "any maskable"
+      "purpose": "any"
+    },
+    {
+      "src": "icon-maskable.png?v=11",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
     }
   ]
 }
