@@ -8,7 +8,7 @@ Created by Zethrel.
 
 Caesar · ROT13 · Atbash · Vigenère · Rail Fence · Binary Converter · A1Z26 · Binary Reverse (custom) · Scandi Caesar (Danish/Norwegian/Swedish alphabets) · Elder Futhark runes · Morse code (with Æ/Ø/Å) · Anagram Helper · Caesar Brute Force helper (cracks unknown shifts, English or Scandinavian alphabets)
 
-Plus **The Basementen** — a password-protected vault cipher. Messages are encrypted with AES-256-GCM (ciphertext format `SB1:<base64>`), and the vault's keys and transaction history are also AES-256-GCM encrypted at rest with keys derived from your passwords via PBKDF2.
+Plus **The Basementen** — a password-protected vault cipher. Messages are encrypted with AES-256-GCM (ciphertext format `SB1:<base64>`), and the vault's keys and transaction history are also AES-256-GCM encrypted at rest with keys derived from your passwords via Argon2id (memory-hard, 64 MiB). Vaults created before the Argon2id switch are upgraded automatically on unlock.
 
 ## Features
 

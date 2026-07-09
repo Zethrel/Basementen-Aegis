@@ -72,16 +72,16 @@ Whenever any file listed in `PRECACHE_URLS` changes (which includes `app.js`, `c
 
 ### Offline constraint
 
-The app must work fully offline. All dependencies are vendored locally (`lucide.min.js`, `qrcode.js`, `fonts/`). Never add a CDN link, external font, or any network fetch to the web app.
+The app must work fully offline. All dependencies are vendored locally (`lucide.min.js`, `qrcode.js`, `argon2-bundled.min.js`, `fonts/`). Never add a CDN link, external font, or any network fetch to the web app.
 
 ## The Basementen vault
 
 The password-protected cipher has its crypto split across both JS files:
 
-- `ciphers.js` (`Basementen`): message encryption. AES-256-GCM via WebCrypto, key = SHA-256 of the transaction key string, 12-byte random IV prepended to the ciphertext, output format `SB1:<base64(iv + ciphertext)>`.
-- `app.js`: vault/session management. The master password derives a key via PBKDF2 (`deriveKeyFromPassword`) that encrypts the vault's transaction keys and history at rest.
+- `ciphers.js` (`Basementen`): message encryption. AES-256-GCM via WebCrypto, key = SHA-256 of the transaction key string (fine — that key is 40 random chars, >256 bits of entropy), 12-byte random IV prepended to the ciphertext, output format `SB1:<base64(iv + ciphertext)>`.
+- `vault.js`: vault/session management. Passwords derive AES keys via **Argon2id** (`deriveKeyFromPassword`, 64 MiB / t=3 / p=1) that encrypt the vault's transaction keys and history at rest. Argon2id runs in a dedicated Web Worker (`argon2-worker.js` + vendored `argon2-bundled.min.js`, MIT) because the WASM computes synchronously on its calling thread. **PBKDF2 (600k iterations) remains as a decrypt-only legacy path**: the master blob's KDF is tracked in `localStorage` (`basementen_kdf`, absent = pbkdf2) and upgrades to Argon2id on the next successful unlock; log entries carry a per-entry `kdf` field and old ones stay PBKDF2 forever (their passwords aren't known). If Argon2 parameters ever change, tag the new scheme (e.g. `argon2id-v2`) instead of altering `ARGON2_PARAMS` — stored blobs are bound to the parameters they were created with.
 
-Persistent state lives in `localStorage` under `aegis_state`, `aegis_history`, and `basementen_salt` / `basementen_iv` / `basementen_encrypted_key` / `basementen_history`. `migrateLegacyStorage()` in `app.js` renames pre-rebrand keys; keep it in mind if renaming keys again.
+Persistent state lives in `localStorage` under `aegis_state`, `aegis_history`, and `basementen_salt` / `basementen_iv` / `basementen_encrypted_key` / `basementen_kdf` / `basementen_history`. `migrateLegacyStorage()` in `state.js` renames pre-rebrand keys; keep it in mind if renaming keys again.
 
 ## Conventions
 

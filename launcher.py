@@ -144,6 +144,7 @@ def main():
     expected_files = ['index.html', 'styles.css', 'app.js', 'dom.js', 'state.js', 'ui.js',
                        'registry.js', 'history.js', 'vault.js', 'ciphers.js', 'sw.js',
                        'manifest.json', 'logo.png', 'icon.png', 'lucide.min.js', 'qrcode.js',
+                       'argon2-bundled.min.js', 'argon2-worker.js',
                        'fonts/fonts.css', 'fonts/outfit.woff2', 'fonts/jetbrains-mono.woff2',
                        'AegisRoot.cer']
     for file in expected_files:
