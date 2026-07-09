@@ -8,7 +8,7 @@ Created by Zethrel — Argent Dawn EU, for the Starlight guild.
 
 Caesar · ROT13 · Atbash · Vigenère · Rail Fence · Binary Converter · A1Z26 · Binary Reverse (custom) · Scandi Caesar (Danish/Norwegian/Swedish alphabets) · Anagram Helper
 
-Plus **The Basementen** — a password-protected vault cipher, with transactions encrypted at rest using AES-256-GCM (key derived via PBKDF2).
+Plus **The Basementen** — a password-protected vault cipher. Messages are encrypted with AES-256-GCM (ciphertext format `SB1:<base64>`), and the vault's keys and transaction history are also AES-256-GCM encrypted at rest with keys derived from your passwords via PBKDF2. Ciphertexts created before the AES upgrade still decode via a built-in legacy path.
 
 ## Features
 

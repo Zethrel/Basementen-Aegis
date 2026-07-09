@@ -168,7 +168,9 @@ export const Vigenere = {
     encode(text, key, retainPunctuation) {
         key = (key || '').replace(/[^A-Za-z]/g, '').toUpperCase();
         if (!key) {
-            return { result: text, steps: [{ title: "Error", content: "Keyword is empty or invalid. Please provide a key with letters." }] };
+            // Blank output rather than passing plaintext through: a user might
+            // otherwise copy their unencoded message believing it was encoded.
+            return { result: '', steps: [{ title: "Error", content: "Keyword is empty or invalid. Please provide a key with letters. Output cleared." }] };
         }
 
         const steps = [{
@@ -196,7 +198,7 @@ export const Vigenere = {
     decode(text, key, retainPunctuation) {
         key = (key || '').replace(/[^A-Za-z]/g, '').toUpperCase();
         if (!key) {
-            return { result: text, steps: [{ title: "Error", content: "Keyword is empty or invalid. Please provide a key with letters." }] };
+            return { result: '', steps: [{ title: "Error", content: "Keyword is empty or invalid. Please provide a key with letters. Output cleared." }] };
         }
 
         const steps = [{
@@ -229,7 +231,9 @@ export const RailFence = {
     encode(text, rails, retainPunctuation) {
         rails = parseInt(rails, 10);
         if (isNaN(rails) || rails < 2) {
-            return { result: text, steps: [{ title: "Error", content: "Key must be an integer >= 2." }] };
+            // Blank output rather than passing plaintext through: a user might
+            // otherwise copy their unencoded message believing it was encoded.
+            return { result: '', steps: [{ title: "Error", content: "Key must be an integer >= 2. Output cleared." }] };
         }
 
         // Clean input if not retaining punctuation
@@ -253,8 +257,9 @@ export const RailFence = {
             steps.push({ title: "Punctuation Filter", content: removedPunctuation.join('\n') });
         }
 
-        // Initialize 2D grid
-        const grid = Array.from({ length: rails }, () => Array(cleanText.length).fill('.'));
+        // Initialize 2D grid. Empty cells are null (not '.') so that literal
+        // period characters in the text survive the row-by-row readout.
+        const grid = Array.from({ length: rails }, () => Array(cleanText.length).fill(null));
         let row = 0;
         let dirDown = false;
 
@@ -271,14 +276,14 @@ export const RailFence = {
         let result = '';
         for (let r = 0; r < rails; r++) {
             for (let c = 0; c < cleanText.length; c++) {
-                if (grid[r][c] !== '.') {
+                if (grid[r][c] !== null) {
                     result += grid[r][c];
                 }
             }
         }
 
         // Draw grid for process visualization
-        const gridStr = grid.map((r, idx) => `Row ${idx + 1}: ${r.join(' ')}`).join('\n');
+        const gridStr = grid.map((r, idx) => `Row ${idx + 1}: ${r.map(c => c === null ? '.' : c).join(' ')}`).join('\n');
         steps.push({
             title: `Rail Fence Grid (${rails} Rails)`,
             content: gridStr
@@ -290,20 +295,23 @@ export const RailFence = {
     decode(text, rails, retainPunctuation) {
         rails = parseInt(rails, 10);
         if (isNaN(rails) || rails < 2) {
-            return { result: text, steps: [{ title: "Error", content: "Key must be an integer >= 2." }] };
+            return { result: '', steps: [{ title: "Error", content: "Key must be an integer >= 2. Output cleared." }] };
         }
 
         const len = text.length;
         if (len === 0) return { result: '', steps: [] };
 
         const steps = [];
-        const grid = Array.from({ length: rails }, () => Array(len).fill('.'));
+        // Zigzag positions are marked with a unique object (not '*') so that
+        // ciphertext containing literal asterisks can't collide with the marker.
+        const MARKER = {};
+        const grid = Array.from({ length: rails }, () => Array(len).fill(null));
 
-        // Mark zigzag positions with '*'
+        // Mark zigzag positions
         let row = 0;
         let dirDown = false;
         for (let i = 0; i < len; i++) {
-            grid[row][i] = '*';
+            grid[row][i] = MARKER;
             if (row === 0 || row === rails - 1) {
                 dirDown = !dirDown;
             }
@@ -314,7 +322,7 @@ export const RailFence = {
         let textIdx = 0;
         for (let r = 0; r < rails; r++) {
             for (let c = 0; c < len; c++) {
-                if (grid[r][c] === '*' && textIdx < len) {
+                if (grid[r][c] === MARKER && textIdx < len) {
                     grid[r][c] = text[textIdx++];
                 }
             }
@@ -332,7 +340,7 @@ export const RailFence = {
             row += dirDown ? 1 : -1;
         }
 
-        const gridStr = grid.map((r, idx) => `Row ${idx + 1}: ${r.join(' ')}`).join('\n');
+        const gridStr = grid.map((r, idx) => `Row ${idx + 1}: ${r.map(c => (c === null || c === MARKER) ? '.' : c).join(' ')}`).join('\n');
         steps.push({
             title: `Reconstructed Rail Fence Grid (${rails} Rails)`,
             content: gridStr
@@ -790,70 +798,108 @@ export const ScandiCaesar = {
 
 /**
  * 10. THE BASEMENTEN CIPHER
+ *
+ * Messages are encrypted with AES-256-GCM via WebCrypto, keyed by the vault's
+ * random 40-character keyword (hashed with SHA-256 to produce the AES key \u2014
+ * fine for high-entropy key material like this; passwords go through PBKDF2
+ * in the vault layer instead). Ciphertext format: "SB1:" + base64(iv || ct).
+ *
+ * Decode transparently falls back to the pre-AES alphabet-shift scheme for
+ * ciphertexts that don't carry the SB1 prefix, so messages saved or shared
+ * before the upgrade still decrypt.
  */
 const ALPHANUM = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789\u00e6\u00f8\u00e5\u00c6\u00d8\u00c5";
+const BASEMENTEN_PREFIX = 'SB1:';
+
+function bytesToBase64(bytes) {
+    let binary = '';
+    for (let i = 0; i < bytes.length; i++) {
+        binary += String.fromCharCode(bytes[i]);
+    }
+    return btoa(binary);
+}
+
+function base64ToBytes(b64) {
+    const binary = atob(b64);
+    const bytes = new Uint8Array(binary.length);
+    for (let i = 0; i < binary.length; i++) {
+        bytes[i] = binary.charCodeAt(i);
+    }
+    return bytes;
+}
+
+async function basementenAesKey(keyStr) {
+    const digest = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(keyStr));
+    return crypto.subtle.importKey('raw', digest, { name: 'AES-GCM' }, false, ['encrypt', 'decrypt']);
+}
+
+// Pre-AES alphabet-shift decoder, kept only so old ciphertexts remain readable.
+function basementenLegacyDecode(text, key, retainPunctuation) {
+    let result = '';
+    let keyIdx = 0;
+
+    for (let i = 0; i < text.length; i++) {
+        const char = text[i];
+        const idx = ALPHANUM.indexOf(char);
+        if (idx !== -1) {
+            const keyChar = key[keyIdx % key.length];
+            const shift = keyChar.charCodeAt(0);
+            const newIndex = ((idx - shift) % ALPHANUM.length + ALPHANUM.length) % ALPHANUM.length;
+            result += ALPHANUM[newIndex];
+            keyIdx++;
+        } else {
+            if (char === ' ') {
+                result += ' ';
+            } else if (retainPunctuation) {
+                result += char;
+            }
+        }
+    }
+
+    return { result, steps: [] };
+}
 
 export const Basementen = {
-    encode(text, key, retainPunctuation) {
+    async encode(text, key) {
         if (!key) {
-            return { result: text, steps: [] };
+            return { result: '', steps: [] };
         }
 
-        let result = '';
-        let keyIdx = 0;
+        const aesKey = await basementenAesKey(key);
+        const iv = crypto.getRandomValues(new Uint8Array(12));
+        const ciphertext = new Uint8Array(await crypto.subtle.encrypt(
+            { name: 'AES-GCM', iv },
+            aesKey,
+            new TextEncoder().encode(text)
+        ));
 
-        for (let i = 0; i < text.length; i++) {
-            const char = text[i];
-            const idx = ALPHANUM.indexOf(char);
-            if (idx !== -1) {
-                const keyChar = key[keyIdx % key.length];
-                const shift = keyChar.charCodeAt(0);
-                const newIndex = (idx + shift) % ALPHANUM.length;
-                const encodedChar = ALPHANUM[newIndex];
-                
-                result += encodedChar;
-                keyIdx++;
-            } else {
-                if (char === ' ') {
-                    result += ' ';
-                } else if (retainPunctuation) {
-                    result += char;
-                }
-            }
-        }
+        const packed = new Uint8Array(iv.length + ciphertext.length);
+        packed.set(iv);
+        packed.set(ciphertext, iv.length);
 
-        return { result, steps: [] };
+        return { result: BASEMENTEN_PREFIX + bytesToBase64(packed), steps: [] };
     },
 
-    decode(text, key, retainPunctuation) {
+    async decode(text, key, retainPunctuation) {
         if (!key) {
-            return { result: text, steps: [] };
+            return { result: '', steps: [] };
         }
 
-        let result = '';
-        let keyIdx = 0;
-
-        for (let i = 0; i < text.length; i++) {
-            const char = text[i];
-            const idx = ALPHANUM.indexOf(char);
-            if (idx !== -1) {
-                const keyChar = key[keyIdx % key.length];
-                const shift = keyChar.charCodeAt(0);
-                const newIndex = ((idx - shift) % ALPHANUM.length + ALPHANUM.length) % ALPHANUM.length;
-                const decodedChar = ALPHANUM[newIndex];
-                
-                result += decodedChar;
-                keyIdx++;
-            } else {
-                if (char === ' ') {
-                    result += ' ';
-                } else if (retainPunctuation) {
-                    result += char;
-                }
+        const trimmed = text.trim();
+        if (trimmed.startsWith(BASEMENTEN_PREFIX)) {
+            try {
+                const packed = base64ToBytes(trimmed.slice(BASEMENTEN_PREFIX.length));
+                const iv = packed.slice(0, 12);
+                const ciphertext = packed.slice(12);
+                const aesKey = await basementenAesKey(key);
+                const plaintext = await crypto.subtle.decrypt({ name: 'AES-GCM', iv }, aesKey, ciphertext);
+                return { result: new TextDecoder().decode(plaintext), steps: [] };
+            } catch (e) {
+                return { result: '[DECRYPTION FAILED: wrong key or corrupted ciphertext]', steps: [] };
             }
         }
 
-        return { result, steps: [] };
+        return basementenLegacyDecode(text, key, retainPunctuation);
     }
 };
 

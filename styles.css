@@ -198,10 +198,16 @@ body::before {
     border: 1px solid var(--border-glass);
 }
 
-.connection-badge.offline {
-    background-color: var(--color-success-glow);
+.connection-badge.online {
+    background-color: rgba(16, 185, 129, 0.1);
     border-color: rgba(16, 185, 129, 0.4);
     color: var(--color-success);
+}
+
+.connection-badge.offline {
+    background-color: rgba(245, 158, 11, 0.1);
+    border-color: rgba(245, 158, 11, 0.4);
+    color: #f59e0b;
 }
 
 .badge-dot {
@@ -357,6 +363,24 @@ body::before {
     color: var(--color-success);
     border-radius: 4px;
     font-weight: 600;
+}
+
+.badge-helper {
+    background: rgba(59, 130, 246, 0.2);
+    border-color: rgba(59, 130, 246, 0.3);
+    color: #3b82f6;
+}
+
+.badge-scandi {
+    background: rgba(16, 185, 129, 0.2);
+    border-color: rgba(16, 185, 129, 0.3);
+    color: #10b981;
+}
+
+.badge-secure {
+    background: rgba(239, 68, 68, 0.2);
+    border-color: rgba(239, 68, 68, 0.3);
+    color: #ef4444;
 }
 
 /* Workspace Panels */
@@ -1040,9 +1064,488 @@ textarea {
 }
 
 /* Responsive Rules */
+/* Inline cipher parameter validation errors */
+.param-error {
+    display: block;
+    margin-top: 6px;
+    color: #ef4444;
+    font-size: 0.75rem;
+    font-weight: 600;
+    min-height: 1em;
+}
+
+/* Danger-styled action buttons (wipe, clear log, destructive confirms) */
+.btn-danger {
+    background: rgba(239, 68, 68, 0.1);
+    border-color: rgba(239, 68, 68, 0.2);
+    color: #ef4444;
+}
+
+.btn-danger:hover {
+    background: rgba(239, 68, 68, 0.2);
+    border-color: rgba(239, 68, 68, 0.35);
+    color: #f87171;
+}
+
+/* Toast notifications */
+.toast-container {
+    position: fixed;
+    bottom: 24px;
+    left: 50%;
+    transform: translateX(-50%);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 8px;
+    z-index: 1200;
+    pointer-events: none;
+}
+
+.toast {
+    padding: 10px 18px;
+    border-radius: var(--radius-md);
+    font-size: 0.875rem;
+    color: var(--color-text-primary);
+    border-left: 3px solid var(--color-primary);
+    box-shadow: 0 8px 30px rgba(0, 0, 0, 0.4);
+    opacity: 0;
+    transform: translateY(8px);
+    transition: opacity 0.25s ease, transform 0.25s ease;
+    max-width: min(90vw, 480px);
+}
+
+.toast.visible {
+    opacity: 1;
+    transform: none;
+}
+
+.toast-success { border-left-color: var(--color-success); }
+.toast-error   { border-left-color: #ef4444; }
+.toast-warning { border-left-color: #f59e0b; }
+
+/* Shared confirmation modal */
+.confirm-modal {
+    max-width: 420px;
+}
+
+.confirm-modal .modal-desc {
+    text-align: left;
+    white-space: pre-line;
+}
+
+.confirm-modal .input-group {
+    margin-top: 12px;
+}
+
+.confirm-modal .input-group label {
+    display: block;
+    font-size: 0.8rem;
+    margin-bottom: 6px;
+    color: var(--color-text-secondary);
+}
+
+.confirm-modal .input-group input {
+    width: 100%;
+}
+
+.confirm-modal-actions {
+    display: flex;
+    gap: 10px;
+    margin-top: 18px;
+}
+
+.confirm-modal-actions .btn {
+    flex: 1;
+    justify-content: center;
+}
+
+/* Service worker "update ready" toast */
+.update-toast {
+    position: fixed;
+    bottom: 24px;
+    left: 50%;
+    transform: translateX(-50%);
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 12px 16px;
+    border-radius: var(--radius-md);
+    font-size: 0.875rem;
+    color: var(--color-text-primary);
+    z-index: 1100;
+    box-shadow: 0 8px 30px rgba(0, 0, 0, 0.4);
+}
+
 @media (max-width: 950px) {
     .text-console {
         grid-template-columns: 1fr;
+    }
+}
+
+/* ==========================================================================
+   BASEMENTEN PANEL & MODALS
+   Classes replacing the former per-element inline styles.
+   ========================================================================== */
+
+/* Control panel */
+.basementen-ctrls {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    align-items: flex-start;
+    width: 100%;
+}
+
+.basementen-status-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.basementen-status-label {
+    font-size: 0.85rem;
+    color: var(--color-text-secondary);
+    display: flex;
+    align-items: center;
+    gap: 4px;
+}
+
+.basementen-status-label svg {
+    width: 14px;
+    height: 14px;
+    color: var(--color-success);
+}
+
+#basementen-key-status {
+    font-size: 0.85rem;
+    font-weight: 600;
+    color: var(--color-success);
+}
+
+#basementen-key-status.locked {
+    color: #ef4444;
+}
+
+.basementen-ctrls .input-group {
+    width: 100%;
+    margin-top: 5px;
+    margin-bottom: 5px;
+}
+
+.basementen-ctrls .input-group label {
+    font-size: 0.8rem;
+    margin-bottom: 6px;
+    display: block;
+    color: var(--color-text-secondary);
+    text-align: left;
+}
+
+.basementen-ctrls .input-group .input-text {
+    width: 100%;
+    padding: 8px 12px;
+    font-size: 0.85rem;
+}
+
+.field-error {
+    color: #ef4444;
+    font-size: 11px;
+    font-weight: 600;
+    display: block;
+    margin-top: 4px;
+    min-height: 14px;
+}
+
+.basementen-btn-row {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+    width: 100%;
+}
+
+.btn-sm svg {
+    width: 14px;
+    height: 14px;
+    flex-shrink: 0;
+}
+
+.btn-block {
+    width: 100%;
+    justify-content: center;
+}
+
+#basementen-copy-output {
+    margin-top: 8px;
+}
+
+/* Auto-recognition status panel (decode mode) */
+.auto-recognize-panel {
+    width: 100%;
+    border-radius: var(--radius-md);
+    padding: 12px;
+    margin-top: 8px;
+    text-align: left;
+}
+
+.auto-recognize-panel.success {
+    background: rgba(16, 185, 129, 0.08);
+    border: 1px solid rgba(16, 185, 129, 0.2);
+}
+
+.auto-recognize-panel.danger {
+    background: rgba(239, 68, 68, 0.08);
+    border: 1px solid rgba(239, 68, 68, 0.2);
+}
+
+.auto-status-title {
+    font-size: 0.8rem;
+    font-weight: 700;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    margin-bottom: 6px;
+}
+
+.auto-recognize-panel.success .auto-status-title { color: #10b981; }
+.auto-recognize-panel.danger .auto-status-title { color: #ef4444; }
+
+.auto-status-title svg {
+    width: 14px;
+    height: 14px;
+}
+
+.auto-status-desc {
+    font-size: 0.75rem;
+    margin: 0;
+    line-height: 1.4;
+    color: var(--color-text-secondary);
+}
+
+/* Parameter panel helpers */
+.param-subfield {
+    margin-bottom: 12px;
+}
+
+.param-info {
+    font-size: 0.85rem;
+    color: var(--color-text-secondary);
+    line-height: 1.4;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.param-info p {
+    margin: 0;
+}
+
+.param-info-title {
+    font-weight: 600;
+    color: #3b82f6;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.param-info-title svg {
+    width: 14px;
+    height: 14px;
+}
+
+/* Mobile install instructions */
+.install-instructions {
+    margin-top: 15px;
+    font-size: 13px;
+    color: rgba(255, 255, 255, 0.7);
+    border-top: 1px solid rgba(255, 255, 255, 0.1);
+    padding-top: 12px;
+    line-height: 1.4;
+}
+
+.install-instructions p {
+    margin-bottom: 6px;
+}
+
+.install-instructions p:last-child {
+    margin-bottom: 0;
+}
+
+.install-instructions .install-note-title {
+    margin-bottom: 8px;
+    font-weight: 600;
+    color: var(--color-success);
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.install-note-title svg {
+    width: 16px;
+    height: 16px;
+}
+
+/* Modal sizing & shared modal layout */
+.modal-sm { max-width: 400px; }
+.modal-md { max-width: 460px; }
+.modal-lg { max-width: 700px; width: 90%; }
+
+.modal-body-stack {
+    display: flex;
+    flex-direction: column;
+    gap: 15px;
+}
+
+.modal-form {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.modal-form .input-text {
+    width: 100%;
+}
+
+.form-error {
+    color: #ef4444;
+    font-size: 13px;
+    font-weight: 600;
+    text-align: center;
+    min-height: 18px;
+}
+
+.modal-btn-row {
+    display: flex;
+    gap: 10px;
+    margin-top: 5px;
+}
+
+.modal-btn-row .btn {
+    flex: 1;
+}
+
+/* Per-modal header icon accents */
+#basementen-setup-modal .modal-header h3 svg { color: #ef4444; }
+#basementen-unlock-modal .modal-header h3 svg { color: #6366f1; }
+#basementen-log-modal .modal-header h3 svg { color: #06b6d4; }
+#basementen-reveal-key-modal .modal-header h3 svg { color: #06b6d4; }
+
+/* Setup modal */
+.warning-alert-box {
+    background: rgba(239, 68, 68, 0.1);
+    border: 1px solid rgba(239, 68, 68, 0.25);
+    border-radius: var(--radius-md);
+    padding: 15px;
+    color: #fca5a5;
+    font-size: 14px;
+    line-height: 1.5;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.warning-alert-title {
+    font-weight: 700;
+    color: #ef4444;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.warning-alert-box .warning-important {
+    color: #ffffff;
+}
+
+#setup-countdown-container {
+    text-align: center;
+    padding: 10px;
+    font-weight: 600;
+    color: var(--color-text-secondary);
+}
+
+/* Starts dimmed & inert during the countdown; JS lifts it via inline style */
+#basementen-setup-form {
+    opacity: 0.4;
+    pointer-events: none;
+    transition: opacity 0.3s ease;
+}
+
+#basementen-setup-submit {
+    margin-top: 8px;
+    width: 100%;
+}
+
+/* Transaction log table */
+.log-table-wrap {
+    max-height: 350px;
+    overflow-y: auto;
+    border: 1px solid var(--border-glass);
+    border-radius: var(--radius-md);
+    background: rgba(0, 0, 0, 0.2);
+}
+
+.log-table {
+    width: 100%;
+    border-collapse: collapse;
+    text-align: left;
+    font-size: 13px;
+}
+
+.log-table thead tr {
+    border-bottom: 1px solid var(--border-glass);
+    background: rgba(255, 255, 255, 0.02);
+    color: var(--color-text-primary);
+}
+
+.log-table tbody tr {
+    border-bottom: 1px solid var(--border-glass);
+}
+
+.log-table th,
+.log-table td {
+    padding: 10px;
+}
+
+.log-table th.key-col {
+    font-family: var(--font-mono);
+}
+
+.log-empty {
+    text-align: center;
+    padding: 15px;
+    color: var(--color-text-muted);
+}
+
+.reveal-link {
+    color: var(--color-primary);
+    cursor: pointer;
+    text-decoration: underline;
+}
+
+.log-table td.revealed {
+    color: #10b981;
+}
+
+/* Spacing utilities for one-off overrides */
+.m-0 { margin: 0; }
+.mb-15 { margin-bottom: 15px; }
+.text-left { text-align: left; }
+
+/* Compact header on narrow screens: action buttons collapse to icons and
+   the connection badge to its status dot, so the logo never gets crowded. */
+@media (max-width: 600px) {
+    .header-actions .btn span {
+        display: none;
+    }
+
+    .header-actions .btn {
+        padding: 10px;
+    }
+
+    #connection-text {
+        display: none;
+    }
+
+    .connection-badge {
+        padding: 8px;
     }
 }
 
@@ -1054,22 +1557,53 @@ textarea {
     .app-layout {
         grid-template-columns: 1fr;
     }
-    
+
+    /* Grid items default to min-width auto, which lets the wide pill row
+       stretch the whole page; min-width 0 keeps scrolling inside .cipher-nav. */
+    .app-layout > * {
+        min-width: 0;
+    }
+
     .cipher-sidebar {
         border-bottom: 1px solid var(--border-glass);
         padding-bottom: 1rem;
     }
     
+    /* On small screens the cipher list becomes a horizontally scrollable
+       pill row instead of a tall wrapped grid, keeping the workspace high
+       up on the page while preserving one-tap switching, icons and badges. */
     .cipher-nav {
         flex-direction: row;
-        flex-wrap: wrap;
-        gap: 6px;
+        flex-wrap: nowrap;
+        gap: 8px;
+        overflow-x: auto;
+        padding-bottom: 8px;
+        -webkit-overflow-scrolling: touch;
+        scrollbar-width: thin;
+        scroll-snap-type: x proximity;
     }
-    
+
+    .cipher-nav::-webkit-scrollbar {
+        height: 4px;
+    }
+
+    .cipher-nav::-webkit-scrollbar-thumb {
+        background: rgba(255, 255, 255, 0.15);
+        border-radius: 4px;
+    }
+
     .cipher-select-btn {
-        flex: 1 1 calc(50% - 6px);
-        padding: 10px 14px;
-        font-size: 0.875rem;
+        flex: 0 0 auto;
+        padding: 8px 16px;
+        font-size: 0.85rem;
+        border-radius: 999px;
+        border-color: var(--border-glass);
+        white-space: nowrap;
+        scroll-snap-align: start;
+    }
+
+    .cipher-select-btn .badge-custom {
+        margin-left: 8px;
     }
     
     .control-panel {

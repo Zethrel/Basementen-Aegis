@@ -32,8 +32,8 @@ let basementenDecryptedKey = null;
 
 // DOM Elements
 const elements = {
-    // Navigation
-    cipherBtns: document.querySelectorAll('.cipher-select-btn'),
+    // Navigation (assigned in init() after renderCipherNav() generates the buttons)
+    cipherBtns: null,
     // Modes
     modeSelector: document.querySelector('.mode-selector'),
     modeEncode: document.getElementById('mode-encode'),
@@ -42,14 +42,7 @@ const elements = {
     optPunctuation: document.getElementById('option-punctuation'),
     optProcess: document.getElementById('option-process'),
     processSection: document.getElementById('process-section'),
-    // Inputs & Parameters
-    paramCaesar: document.getElementById('param-caesar'),
-    paramScandicaesar: document.getElementById('param-scandicaesar'),
-    paramVigenere: document.getElementById('param-vigenere'),
-    paramRailfence: document.getElementById('param-railfence'),
-    paramAnagram: document.getElementById('param-anagram'),
-    paramNone: document.getElementById('param-none'),
-    
+    // Inputs & Parameters (param-group panels are looked up by id via the registry)
     caesarShift: document.getElementById('caesar-shift'),
     shiftValue: document.getElementById('shift-value'),
     caesarShiftDown: document.getElementById('caesar-shift-down'),
@@ -60,7 +53,9 @@ const elements = {
     scandicaesarShiftUp: document.getElementById('scandicaesar-shift-up'),
     scandicaesarLang: document.getElementById('scandicaesar-lang'),
     vigenereKey: document.getElementById('vigenere-key'),
+    vigenereError: document.getElementById('vigenere-error'),
     railfenceRails: document.getElementById('railfence-rails'),
+    railfenceError: document.getElementById('railfence-error'),
     
     btnShuffleOutput: document.getElementById('btn-shuffle-output'),
     
@@ -91,7 +86,6 @@ const elements = {
     qrUrlText: document.getElementById('qr-url-text'),
 
     // Basementen elements
-    paramBasementen: document.getElementById('param-basementen'),
     basementenGenKey: document.getElementById('basementen-gen-key'),
     basementenViewLog: document.getElementById('basementen-view-log'),
     basementenResetPwd: document.getElementById('basementen-reset-pwd'),
@@ -103,6 +97,7 @@ const elements = {
     basementenPwdStrengthBar: document.getElementById('basementen-pwd-strength-bar'),
     basementenPwdStrengthLabel: document.getElementById('basementen-pwd-strength-label'),
     basementenSetupSubmit: document.getElementById('basementen-setup-submit'),
+    basementenSetupCancel: document.getElementById('basementen-setup-cancel'),
     basementenUnlockModal: document.getElementById('basementen-unlock-modal'),
     basementenUnlockForm: document.getElementById('basementen-unlock-form'),
     basementenUnlockPwdInput: document.getElementById('basementen-unlock-pwd-input'),
@@ -133,6 +128,17 @@ const elements = {
     basementenRevealKeyError: document.getElementById('basementen-reveal-key-error'),
     basementenRevealKeyClose: document.getElementById('basementen-reveal-key-close'),
     basementenRevealKeyCancel: document.getElementById('basementen-reveal-key-cancel'),
+    basementenSetupError: document.getElementById('basementen-setup-error'),
+
+    // Shared confirmation modal
+    confirmModal: document.getElementById('confirm-modal'),
+    confirmModalTitle: document.getElementById('confirm-modal-title'),
+    confirmModalMessage: document.getElementById('confirm-modal-message'),
+    confirmModalTypeGroup: document.getElementById('confirm-modal-type-group'),
+    confirmModalTypeLabel: document.getElementById('confirm-modal-type-label'),
+    confirmModalTypeInput: document.getElementById('confirm-modal-type-input'),
+    confirmModalCancel: document.getElementById('confirm-modal-cancel'),
+    confirmModalOk: document.getElementById('confirm-modal-ok'),
     
     // Panel title and copy helper elements
     inputPanelTitle: document.getElementById('input-panel-title'),
@@ -140,16 +146,328 @@ const elements = {
     basementenCopyOutput: document.getElementById('basementen-copy-output')
 };
 
+/* ==========================================================================
+   CIPHER REGISTRY
+   Single source of truth for every cipher: sidebar entry (name/icon/badge),
+   parameter panel, history label, and the conversion dispatch. Adding a new
+   cipher means adding one entry here (plus a param panel in index.html if it
+   needs configuration).
+
+   Fields:
+   - id:         internal identifier (persisted in state & history)
+   - name:       sidebar display name
+   - shortName:  compact label used in the history list
+   - icon:       lucide icon name
+   - badge:      optional { text, className } sidebar badge
+   - paramGroup: DOM id of the parameter panel to show
+   - run:        (input, mode, opts) => { result, steps } (may be async);
+                 reads its parameters from the DOM and owns its inline
+                 validation errors. Omitted for the anagram helper, which
+                 short-circuits in runConversion before dispatch.
+   ========================================================================== */
+const CIPHERS = [
+    {
+        id: 'a1z26', name: 'A1Z26 Cipher', shortName: 'A1Z26', icon: 'hash', paramGroup: 'param-none',
+        run: (input, mode, opts) => mode === 'encode'
+            ? A1z26.encode(input, null, opts.retainPunctuation)
+            : A1z26.decode(input, null, opts.retainPunctuation)
+    },
+    {
+        id: 'anagram', name: 'Anagram Helper', shortName: 'Anagram', icon: 'shuffle',
+        badge: { text: 'Helper', className: 'badge-helper' }, paramGroup: 'param-anagram'
+    },
+    {
+        id: 'atbash', name: 'Atbash Cipher', shortName: 'Atbash', icon: 'shuffle', paramGroup: 'param-none',
+        run: (input, mode, opts) => mode === 'encode'
+            ? Atbash.encode(input, null, opts.retainPunctuation)
+            : Atbash.decode(input, null, opts.retainPunctuation)
+    },
+    {
+        id: 'binary', name: 'Binary Converter', shortName: 'Binary', icon: 'binary', paramGroup: 'param-none',
+        run: (input, mode, opts) => mode === 'encode'
+            ? BinaryConverter.encode(input, null, opts.retainPunctuation)
+            : BinaryConverter.decode(input, null, opts.retainPunctuation)
+    },
+    {
+        id: 'binreverse', name: 'Binary Reverse', shortName: 'Binary Reverse', icon: 'lock',
+        badge: { text: 'Custom' }, paramGroup: 'param-none',
+        run: (input, mode, opts) => mode === 'encode'
+            ? BinaryReverse.encode(input, 'fixed', opts.retainPunctuation)
+            : BinaryReverse.decode(input, 'fixed', opts.retainPunctuation)
+    },
+    {
+        id: 'caesar', name: 'Caesar Cipher', shortName: 'Caesar', icon: 'key-round', paramGroup: 'param-caesar',
+        run: (input, mode, opts) => {
+            const shift = parseInt(elements.caesarShift.value, 10);
+            return mode === 'encode'
+                ? Caesar.encode(input, shift, opts.retainPunctuation)
+                : Caesar.decode(input, shift, opts.retainPunctuation);
+        }
+    },
+    {
+        id: 'railfence', name: 'Rail Fence', shortName: 'Rail Fence', icon: 'rows', paramGroup: 'param-railfence',
+        run: (input, mode, opts) => {
+            const rails = parseInt(elements.railfenceRails.value, 10);
+            const railsValid = !isNaN(rails) && rails >= 2 && rails <= 10;
+            elements.railfenceError.textContent = railsValid ? '' : 'Number of rails must be between 2 and 10.';
+            if (!railsValid) {
+                return { result: '', steps: [{ title: 'Error', content: 'Number of rails must be between 2 and 10. Output cleared.' }] };
+            }
+            return mode === 'encode'
+                ? RailFence.encode(input, rails, opts.retainPunctuation)
+                : RailFence.decode(input, rails, opts.retainPunctuation);
+        }
+    },
+    {
+        id: 'rot13', name: 'ROT13 Cipher', shortName: 'ROT13', icon: 'refresh-cw', paramGroup: 'param-none',
+        run: (input, mode, opts) => mode === 'encode'
+            ? Rot13.encode(input, null, opts.retainPunctuation)
+            : Rot13.decode(input, null, opts.retainPunctuation)
+    },
+    {
+        id: 'scandicaesar', name: 'Scandi Caesar', shortName: 'Scandi Caesar', icon: 'globe',
+        badge: { text: 'Scandi', className: 'badge-scandi' }, paramGroup: 'param-scandicaesar',
+        run: (input, mode, opts) => {
+            const shift = parseInt(elements.scandicaesarShift.value, 10);
+            const variant = elements.scandicaesarLang.value;
+            return mode === 'encode'
+                ? ScandiCaesar.encode(input, shift, variant, opts.retainPunctuation)
+                : ScandiCaesar.decode(input, shift, variant, opts.retainPunctuation);
+        }
+    },
+    {
+        id: 'basementen', name: 'The Basementen', shortName: 'The Basementen', icon: 'shield-alert',
+        badge: { text: 'Secure', className: 'badge-secure' }, paramGroup: 'param-basementen',
+        run: async (input, mode, opts) => {
+            if (!basementenUnlocked) {
+                return { result: "LOCKED: Please enter master password", steps: [] };
+            }
+            if (mode === 'decode') {
+                if (basementenDecryptedKey !== null) {
+                    return Basementen.decode(input, basementenDecryptedKey, opts.retainPunctuation);
+                }
+                return { result: "[LOCKED: Enter Transaction Password in the control panel to load key]", steps: [] };
+            }
+            if (basementenTxValid) {
+                return Basementen.encode(input, basementenKey);
+            }
+            return { result: "[LOCKED: Set Transaction Password in the control panel to unlock composition]", steps: [] };
+        }
+    },
+    {
+        id: 'vigenere', name: 'Vigenere Cipher', shortName: 'Vigenere', icon: 'keyboard', paramGroup: 'param-vigenere',
+        run: (input, mode, opts) => {
+            const key = elements.vigenereKey.value;
+            const hasKey = key.replace(/[^A-Za-z]/g, '').length > 0;
+            elements.vigenereError.textContent = hasKey ? '' : 'Enter a keyword (letters) to produce output.';
+            return mode === 'encode'
+                ? Vigenere.encode(input, key, opts.retainPunctuation)
+                : Vigenere.decode(input, key, opts.retainPunctuation);
+        }
+    }
+];
+
+function getCipher(id) {
+    return CIPHERS.find(c => c.id === id) || null;
+}
+
+/**
+ * Generate the sidebar buttons from the registry.
+ */
+function renderCipherNav() {
+    const nav = document.querySelector('.cipher-nav');
+    nav.innerHTML = '';
+    for (const cipher of CIPHERS) {
+        const btn = document.createElement('button');
+        btn.className = 'cipher-select-btn';
+        btn.dataset.cipher = cipher.id;
+
+        const icon = document.createElement('i');
+        icon.setAttribute('data-lucide', cipher.icon);
+        btn.appendChild(icon);
+
+        const name = document.createElement('span');
+        name.className = 'cipher-name';
+        name.textContent = cipher.name;
+        btn.appendChild(name);
+
+        if (cipher.badge) {
+            const badge = document.createElement('span');
+            badge.className = 'badge-custom' + (cipher.badge.className ? ` ${cipher.badge.className}` : '');
+            badge.textContent = cipher.badge.text;
+            btn.appendChild(badge);
+        }
+
+        nav.appendChild(btn);
+    }
+}
+
 // Global PWA Install prompt pointer
 let deferredPrompt = null;
 
 // Debounce helper for auto-saving history
 let historySaveTimeout = null;
 
+/* ==========================================================================
+   MODAL HELPERS
+   Central open/close so every modal gets Escape-to-dismiss, overlay-click
+   dismiss, a Tab focus trap, and focus restored to the triggering element.
+   ========================================================================== */
+
+// overlay element -> dismiss function (what Escape / overlay click should do)
+const modalRegistry = new Map();
+
+// Focus to restore when each open modal closes (stack: log modal can open
+// the reveal modal on top of itself).
+const modalFocusStack = [];
+
+function openModal(overlay) {
+    modalFocusStack.push(document.activeElement);
+    overlay.classList.remove('hidden');
+}
+
+function closeModal(overlay) {
+    overlay.classList.add('hidden');
+    const previous = modalFocusStack.pop();
+    if (previous && document.contains(previous) && typeof previous.focus === 'function') {
+        previous.focus();
+    }
+}
+
+function registerModal(overlay, dismiss) {
+    modalRegistry.set(overlay, dismiss);
+    overlay.addEventListener('click', (e) => {
+        if (e.target === overlay) dismiss();
+    });
+}
+
+// Topmost visible modal = last visible one in registration order
+// (registration order puts stacked-on-top modals later).
+function topVisibleModal() {
+    let top = null;
+    for (const overlay of modalRegistry.keys()) {
+        if (!overlay.classList.contains('hidden')) top = overlay;
+    }
+    return top;
+}
+
+/* ==========================================================================
+   TOASTS & CONFIRMATION DIALOG
+   Non-blocking replacements for alert()/confirm(): notifications become
+   toasts; destructive actions go through a styled confirm modal that can
+   require typing a phrase before the confirm button unlocks.
+   ========================================================================== */
+
+function showToast(message, type = 'info', duration = 3500) {
+    let container = document.querySelector('.toast-container');
+    if (!container) {
+        container = document.createElement('div');
+        container.className = 'toast-container';
+        document.body.appendChild(container);
+    }
+
+    const toast = document.createElement('div');
+    toast.className = `toast glass toast-${type}`;
+    toast.textContent = message;
+    container.appendChild(toast);
+
+    requestAnimationFrame(() => toast.classList.add('visible'));
+    setTimeout(() => {
+        toast.classList.remove('visible');
+        // Remove after the fade-out transition (fallback timer in case
+        // transitions are disabled, e.g. prefers-reduced-motion).
+        toast.addEventListener('transitionend', () => toast.remove(), { once: true });
+        setTimeout(() => toast.remove(), 600);
+    }, duration);
+}
+
+/**
+ * Styled confirmation dialog. Resolves true if confirmed, false otherwise.
+ * With `typePhrase` set, the confirm button stays disabled until the user
+ * types the phrase exactly — used for irreversible wipe actions.
+ */
+function showConfirm({ title, message, confirmLabel = 'Confirm', danger = false, typePhrase = null }) {
+    return new Promise((resolve) => {
+        elements.confirmModalTitle.textContent = title;
+        elements.confirmModalMessage.textContent = message;
+        elements.confirmModalOk.textContent = confirmLabel;
+        elements.confirmModalOk.classList.toggle('btn-danger', danger);
+        elements.confirmModalOk.classList.toggle('btn-primary', !danger);
+
+        if (typePhrase) {
+            elements.confirmModalTypeGroup.classList.remove('hidden');
+            elements.confirmModalTypeLabel.textContent = `Type ${typePhrase} to confirm:`;
+            elements.confirmModalTypeInput.value = '';
+            elements.confirmModalOk.disabled = true;
+            elements.confirmModalTypeInput.oninput = () => {
+                elements.confirmModalOk.disabled = elements.confirmModalTypeInput.value !== typePhrase;
+            };
+            elements.confirmModalTypeInput.onkeydown = (e) => {
+                if (e.key === 'Enter' && !elements.confirmModalOk.disabled) {
+                    e.preventDefault();
+                    elements.confirmModalOk.click();
+                }
+            };
+        } else {
+            elements.confirmModalTypeGroup.classList.add('hidden');
+            elements.confirmModalOk.disabled = false;
+        }
+
+        const finish = (value) => {
+            closeModal(elements.confirmModal);
+            elements.confirmModalOk.onclick = null;
+            elements.confirmModalCancel.onclick = null;
+            elements.confirmModalTypeInput.oninput = null;
+            elements.confirmModalTypeInput.onkeydown = null;
+            resolve(value);
+        };
+
+        elements.confirmModalOk.onclick = () => finish(true);
+        elements.confirmModalCancel.onclick = () => finish(false);
+
+        openModal(elements.confirmModal);
+        if (typePhrase) {
+            elements.confirmModalTypeInput.focus();
+        } else {
+            elements.confirmModalCancel.focus();
+        }
+    });
+}
+
+document.addEventListener('keydown', (e) => {
+    const overlay = topVisibleModal();
+    if (!overlay) return;
+
+    if (e.key === 'Escape') {
+        e.preventDefault();
+        modalRegistry.get(overlay)();
+    } else if (e.key === 'Tab') {
+        // Keep Tab cycling inside the open modal
+        const focusables = Array.from(
+            overlay.querySelectorAll('button, input, select, textarea, a[href], [tabindex]:not([tabindex="-1"])')
+        ).filter(el => !el.disabled && el.offsetParent !== null);
+        if (focusables.length === 0) return;
+
+        const first = focusables[0];
+        const last = focusables[focusables.length - 1];
+        if (e.shiftKey && document.activeElement === first) {
+            e.preventDefault();
+            last.focus();
+        } else if (!e.shiftKey && document.activeElement === last) {
+            e.preventDefault();
+            first.focus();
+        }
+    }
+});
+
 /**
  * Initialize Application
  */
 function init() {
+    // Build the sidebar from the cipher registry
+    renderCipherNav();
+    elements.cipherBtns = document.querySelectorAll('.cipher-select-btn');
+
     // Load config from LocalStorage if exists
     loadSavedState();
     
@@ -169,6 +487,82 @@ function init() {
     if (window.lucide) {
         window.lucide.createIcons();
     }
+
+    // Register service worker for true offline support
+    registerServiceWorker();
+
+    // On mobile the cipher picker is a horizontal pill row; make sure the
+    // saved active cipher isn't hidden off-screen when the app opens.
+    if (window.matchMedia('(max-width: 768px)').matches) {
+        const activeBtn = document.querySelector('.cipher-select-btn.active');
+        if (activeBtn) {
+            activeBtn.scrollIntoView({ block: 'nearest', inline: 'center' });
+        }
+    }
+}
+
+/**
+ * Register the cache-first service worker and surface a toast when a new
+ * version has finished downloading in the background.
+ */
+function registerServiceWorker() {
+    // Service workers require http(s); opening index.html via file:// still works,
+    // it just skips offline caching (the desktop app serves over 127.0.0.1).
+    if (!('serviceWorker' in navigator) || window.location.protocol === 'file:') return;
+
+    navigator.serviceWorker.register('sw.js').then((registration) => {
+        registration.addEventListener('updatefound', () => {
+            const newWorker = registration.installing;
+            if (!newWorker) return;
+            newWorker.addEventListener('statechange', () => {
+                // 'installed' with an existing controller = an update is waiting
+                // (first-ever install has no controller and needs no toast).
+                if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
+                    showUpdateToast(newWorker);
+                }
+            });
+        });
+    }).catch((err) => {
+        console.error('Service worker registration failed:', err);
+    });
+
+    // When the waiting worker takes over, reload once to load the new assets.
+    let refreshing = false;
+    navigator.serviceWorker.addEventListener('controllerchange', () => {
+        if (refreshing) return;
+        refreshing = true;
+        window.location.reload();
+    });
+}
+
+/**
+ * Show a dismissible "update ready" toast with a reload action.
+ */
+function showUpdateToast(waitingWorker) {
+    if (document.querySelector('.update-toast')) return;
+
+    const toast = document.createElement('div');
+    toast.className = 'update-toast glass';
+
+    const message = document.createElement('span');
+    message.textContent = 'A new version is ready.';
+
+    const reloadBtn = document.createElement('button');
+    reloadBtn.className = 'btn btn-primary btn-sm';
+    reloadBtn.textContent = 'Reload';
+    reloadBtn.addEventListener('click', () => {
+        waitingWorker.postMessage({ type: 'SKIP_WAITING' });
+    });
+
+    const dismissBtn = document.createElement('button');
+    dismissBtn.className = 'btn btn-secondary btn-sm';
+    dismissBtn.textContent = 'Later';
+    dismissBtn.addEventListener('click', () => toast.remove());
+
+    toast.appendChild(message);
+    toast.appendChild(reloadBtn);
+    toast.appendChild(dismissBtn);
+    document.body.appendChild(toast);
 }
 
 /**
@@ -317,13 +711,9 @@ function setupUIFromState() {
  */
 function showActiveParameterGroup() {
     // Hide all
-    elements.paramCaesar.classList.remove('active-param');
-    elements.paramScandicaesar.classList.remove('active-param');
-    elements.paramVigenere.classList.remove('active-param');
-    elements.paramRailfence.classList.remove('active-param');
-    elements.paramAnagram.classList.remove('active-param');
-    elements.paramBasementen.classList.remove('active-param');
-    elements.paramNone.classList.remove('active-param');
+    document.querySelectorAll('.cipher-params .param-group').forEach(group => {
+        group.classList.remove('active-param');
+    });
 
     // Show correct one and handle output panel layout based on state
     if (state.cipher === 'anagram') {
@@ -346,28 +736,10 @@ function showActiveParameterGroup() {
         elements.btnShuffleOutput.classList.add('hidden');
     }
 
-    switch (state.cipher) {
-        case 'caesar':
-            elements.paramCaesar.classList.add('active-param');
-            break;
-        case 'scandicaesar':
-            elements.paramScandicaesar.classList.add('active-param');
-            break;
-        case 'basementen':
-            elements.paramBasementen.classList.add('active-param');
-            break;
-        case 'vigenere':
-            elements.paramVigenere.classList.add('active-param');
-            break;
-        case 'railfence':
-            elements.paramRailfence.classList.add('active-param');
-            break;
-        case 'anagram':
-            elements.paramAnagram.classList.add('active-param');
-            break;
-        default:
-            elements.paramNone.classList.add('active-param');
-            break;
+    const entry = getCipher(state.cipher);
+    const paramGroup = document.getElementById(entry ? entry.paramGroup : 'param-none');
+    if (paramGroup) {
+        paramGroup.classList.add('active-param');
     }
 }
 
@@ -387,11 +759,7 @@ function bindEvents() {
 
             // Click away from basementen: lock it immediately and clear in-memory key
             if (state.cipher === 'basementen' && selectedCipher !== 'basementen') {
-                basementenUnlocked = false;
-                basementenKey = '';
-                basementenCryptoKey = null;
-                elements.basementenKeyStatus.textContent = 'Locked [Requires Verification]';
-                elements.basementenKeyStatus.style.color = '#ef4444';
+                lockBasementenSession();
             }
 
             state.cipher = selectedCipher;
@@ -524,7 +892,7 @@ function bindEvents() {
             triggerHistoryAutoSave();
         } catch (err) {
             // Fallback if permission denied
-            alert("Please paste using Ctrl+V or Cmd+V.");
+            showToast('Clipboard access was blocked — paste with Ctrl+V or Cmd+V instead.', 'warning');
         }
     });
 
@@ -538,23 +906,25 @@ function bindEvents() {
     });
 
     // Copy Action
+    // Lucide replaces <i data-lucide> tags with <svg> elements on render, so
+    // the transient check-mark feedback rebuilds the icon from scratch instead
+    // of mutating an <i> tag that no longer exists after the first render.
+    const setCopyBtnIcon = (name) => {
+        elements.btnCopy.innerHTML = `<i data-lucide="${name}"></i>`;
+        if (window.lucide) window.lucide.createIcons();
+    };
+
     elements.btnCopy.addEventListener('click', () => {
         const text = elements.textOutput.value;
         if (!text) return;
         navigator.clipboard.writeText(text).then(() => {
             // Transient UI feedback
-            const copyIcon = elements.btnCopy.querySelector('i');
-            const originalIcon = copyIcon.getAttribute('data-lucide');
-            copyIcon.setAttribute('data-lucide', 'check');
-            if (window.lucide) window.lucide.createIcons();
-            
+            setCopyBtnIcon('check');
+
             // Add immediately to history when they explicitly copy (as they finished working with it)
             saveToHistory(elements.textInput.value, text);
-            
-            setTimeout(() => {
-                copyIcon.setAttribute('data-lucide', originalIcon);
-                if (window.lucide) window.lucide.createIcons();
-            }, 1500);
+
+            setTimeout(() => setCopyBtnIcon('copy'), 1500);
         });
     });
 
@@ -607,151 +977,181 @@ function bindEvents() {
 
     elements.mobileBtn.addEventListener('click', () => {
         updateQrCode("https://kosejarl.github.io/starlight-cipher-suite/");
-        elements.mobileModal.classList.remove('hidden');
+        openModal(elements.mobileModal);
     });
 
     elements.closeModalBtn.addEventListener('click', () => {
-        elements.mobileModal.classList.add('hidden');
+        closeModal(elements.mobileModal);
     });
 
-    elements.mobileModal.addEventListener('click', (e) => {
-        if (e.target === elements.mobileModal) {
-            elements.mobileModal.classList.add('hidden');
-        }
-    });
+    // Escape / overlay-click dismissal for every modal. Registration order
+    // matters for stacking: the reveal modal opens on top of the log modal,
+    // so it's registered after it and wins the Escape key while visible.
+    registerModal(elements.mobileModal, () => closeModal(elements.mobileModal));
+    registerModal(elements.basementenSetupModal, () => elements.basementenSetupCancel.click());
+    registerModal(elements.basementenUnlockModal, () => elements.basementenUnlockCancel.click());
+    registerModal(elements.basementenLogModal, () => closeModal(elements.basementenLogModal));
+    registerModal(elements.basementenRevealKeyModal, () => closeModal(elements.basementenRevealKeyModal));
+    // Registered last: the confirm dialog can stack on top of any other modal.
+    registerModal(elements.confirmModal, () => elements.confirmModalCancel.click());
 
 
 
     // Basementen Event Listeners
     elements.basementenGenKey.addEventListener('click', async () => {
         if (!basementenUnlocked || !basementenCryptoKey) return;
-        if (confirm("Are you sure you want to generate a new 256-bit key? This will replace the active key.")) {
-            const newKey = generate256BitKey();
-            const iv = window.crypto.getRandomValues(new Uint8Array(12));
-            const encrypted = await window.crypto.subtle.encrypt(
-                { name: "AES-GCM", iv: iv },
-                basementenCryptoKey,
-                new TextEncoder().encode(newKey)
-            );
-            localStorage.setItem('basementen_iv', bufToHex(iv));
-            localStorage.setItem('basementen_encrypted_key', bufToHex(encrypted));
-            basementenKey = newKey;
-            elements.basementenKeyStatus.textContent = 'Active [Secure 256-bit]';
-            elements.basementenKeyStatus.style.color = '#10b981';
-            alert("New 256-bit key generated and encrypted successfully.");
-            runConversion();
-        }
+        const ok = await showConfirm({
+            title: 'Generate New Key',
+            message: 'This will replace the active 256-bit key. New transactions will use the new key; previously saved transactions stay decryptable through the key log.',
+            confirmLabel: 'Generate'
+        });
+        if (!ok) return;
+
+        const newKey = generate256BitKey();
+        const iv = window.crypto.getRandomValues(new Uint8Array(12));
+        const encrypted = await window.crypto.subtle.encrypt(
+            { name: "AES-GCM", iv: iv },
+            basementenCryptoKey,
+            new TextEncoder().encode(newKey)
+        );
+        localStorage.setItem('basementen_iv', bufToHex(iv));
+        localStorage.setItem('basementen_encrypted_key', bufToHex(encrypted));
+        basementenKey = newKey;
+        elements.basementenKeyStatus.textContent = 'Active [Secure 256-bit]';
+        elements.basementenKeyStatus.classList.remove('locked');
+        showToast('New 256-bit key generated and encrypted.', 'success');
+        runConversion();
     });
 
     elements.basementenViewLog.addEventListener('click', () => {
         if (!basementenUnlocked) return;
         renderBasementenLog();
-        elements.basementenLogModal.classList.remove('hidden');
+        openModal(elements.basementenLogModal);
         if (window.lucide) window.lucide.createIcons();
     });
 
-    elements.basementenResetPwd.addEventListener('click', () => {
-        if (wipeBasementenWorkspace("WARNING: Are you sure you want to wipe all transaction history, generated keys, and master password for The Basementen? This cannot be undone!")) {
-            alert("The Basementen workspace has been fully wiped and reset.");
+    elements.basementenResetPwd.addEventListener('click', async () => {
+        if (await wipeBasementenWorkspace("This will permanently erase all transaction history, generated keys, and the master password for The Basementen. This cannot be undone.")) {
+            showToast('The Basementen workspace has been fully wiped and reset.', 'success');
         }
     });
 
     elements.basementenLogClose.addEventListener('click', () => {
-        elements.basementenLogModal.classList.add('hidden');
+        closeModal(elements.basementenLogModal);
     });
 
     elements.basementenLogOk.addEventListener('click', () => {
-        elements.basementenLogModal.classList.add('hidden');
+        closeModal(elements.basementenLogModal);
     });
 
-    elements.basementenClearLog.addEventListener('click', () => {
-        if (confirm("Are you sure you want to clear all Basementen transaction logs?")) {
-            localStorage.removeItem('basementen_history');
-            renderBasementenLog();
-        }
+    elements.basementenClearLog.addEventListener('click', async () => {
+        const ok = await showConfirm({
+            title: 'Clear Log History',
+            message: 'This permanently deletes every saved transaction and its encrypted key. Any ciphertext whose key only exists in this log becomes undecryptable. This cannot be undone.',
+            confirmLabel: 'Clear Log',
+            danger: true,
+            typePhrase: 'CLEAR'
+        });
+        if (!ok) return;
+        localStorage.removeItem('basementen_history');
+        renderBasementenLog();
+        showToast('Basementen transaction log cleared.', 'success');
     });
 
-    // Dynamic validation & password-first lock handlers for the Transaction Password field
-    elements.basementenTxPassword.addEventListener('input', async (e) => {
+    // Dynamic validation & password-first lock handlers for the Transaction Password field.
+    // Cheap checks (empty/length) run on every keystroke, but the PBKDF2-based checks
+    // (600k iterations each) are debounced so they only run after typing pauses —
+    // previously they ran per keystroke and could freeze the UI on slower machines.
+    let txPasswordDebounce = null;
+    const TX_PASSWORD_DEBOUNCE_MS = 400;
+
+    const lockCompositionPanel = (placeholder) => {
+        elements.textInput.disabled = true;
+        elements.textInput.value = '';
+        elements.textInput.placeholder = placeholder;
+    };
+
+    elements.basementenTxPassword.addEventListener('input', (e) => {
         const pwd = e.target.value;
         elements.basementenTxError.textContent = '';
         elements.basementenTxError.style.color = '#ef4444';
+        if (txPasswordDebounce) clearTimeout(txPasswordDebounce);
 
         if (state.mode === 'encode') {
             if (!pwd) {
                 basementenTxValid = false;
-                elements.textInput.disabled = true;
-                elements.textInput.value = '';
-                elements.textInput.placeholder = "Please enter a unique Transaction Password in the control panel to unlock composition...";
+                lockCompositionPanel("Please enter a unique Transaction Password in the control panel to unlock composition...");
                 return;
             }
 
             if (pwd.length < 10 || pwd.length > 32) {
                 elements.basementenTxError.textContent = 'Password must be between 10 and 32 characters.';
                 basementenTxValid = false;
-                elements.textInput.disabled = true;
-                elements.textInput.value = '';
-                elements.textInput.placeholder = "Please enter a unique Transaction Password in the control panel to unlock composition...";
+                lockCompositionPanel("Please enter a unique Transaction Password in the control panel to unlock composition...");
                 return;
             }
 
-            const isMaster = await isMasterPassword(pwd);
-            if (isMaster) {
-                elements.basementenTxError.textContent = 'Transaction password cannot be the same as the master password.';
-                basementenTxValid = false;
-                elements.textInput.disabled = true;
-                elements.textInput.value = '';
-                elements.textInput.placeholder = "Please enter a unique Transaction Password in the control panel to unlock composition...";
-                return;
-            }
+            txPasswordDebounce = setTimeout(async () => {
+                const isMaster = await isMasterPassword(pwd);
+                // Ignore stale results if the field changed while deriving
+                if (elements.basementenTxPassword.value !== pwd) return;
 
-            basementenTxValid = true;
-            elements.textInput.disabled = false;
-            elements.textInput.placeholder = "Type or paste your text here...";
+                if (isMaster) {
+                    elements.basementenTxError.textContent = 'Transaction password cannot be the same as the master password.';
+                    basementenTxValid = false;
+                    lockCompositionPanel("Please enter a unique Transaction Password in the control panel to unlock composition...");
+                    return;
+                }
+
+                basementenTxValid = true;
+                elements.textInput.disabled = false;
+                elements.textInput.placeholder = "Type or paste your text here...";
+            }, TX_PASSWORD_DEBOUNCE_MS);
         } else {
             // Decode mode: find log entry by password first
             if (!pwd) {
                 basementenDecryptedKey = null;
-                elements.textInput.disabled = true;
-                elements.textInput.value = '';
-                elements.textInput.placeholder = "Please enter the Transaction Password in the control panel to load the key...";
+                lockCompositionPanel("Please enter the Transaction Password in the control panel to load the key...");
                 elements.basementenAutoRecognizePanel.classList.add('hidden');
                 return;
             }
 
-            const matched = await searchHistoryByPassword(pwd);
-            if (matched) {
-                basementenDecryptedKey = matched.decryptedKey;
-                elements.textInput.disabled = false;
-                elements.textInput.placeholder = "Enter ciphertext to decrypt...";
-                
-                elements.basementenAutoRecognizePanel.classList.remove('hidden');
-                elements.basementenAutoRecognizePanel.style.background = 'rgba(16, 185, 129, 0.08)';
-                elements.basementenAutoRecognizePanel.style.border = '1px solid rgba(16, 185, 129, 0.2)';
-                elements.basementenAutoStatusTitle.style.color = '#10b981';
-                elements.basementenAutoStatusTitle.innerHTML = `<i data-lucide="check-circle" style="width: 14px; height: 14px;"></i> Key Recovered Successfully`;
-                elements.basementenAutoStatusDesc.style.color = 'var(--color-text-secondary)';
-                elements.basementenAutoStatusDesc.textContent = `Found matching log entry from ${matched.item.timestamp}. Ready to decrypt.`;
-                if (window.lucide) window.lucide.createIcons();
-
-                runConversion();
-            } else {
-                basementenDecryptedKey = null;
-                elements.textInput.disabled = true;
-                elements.textInput.value = '';
-                elements.textInput.placeholder = "Please enter the Transaction Password in the control panel to load the key...";
-                
-                elements.basementenAutoRecognizePanel.classList.remove('hidden');
-                elements.basementenAutoRecognizePanel.style.background = 'rgba(239, 68, 68, 0.08)';
-                elements.basementenAutoRecognizePanel.style.border = '1px solid rgba(239, 68, 68, 0.2)';
-                elements.basementenAutoStatusTitle.style.color = '#ef4444';
-                elements.basementenAutoStatusTitle.innerHTML = `<i data-lucide="x-circle" style="width: 14px; height: 14px;"></i> Key Not Found`;
-                elements.basementenAutoStatusDesc.style.color = 'var(--color-text-secondary)';
-                elements.basementenAutoStatusDesc.textContent = "No matching transaction log found for this password.";
-                if (window.lucide) window.lucide.createIcons();
-            }
+            txPasswordDebounce = setTimeout(() => runDecodePasswordSearch(pwd), TX_PASSWORD_DEBOUNCE_MS);
         }
     });
+
+    // Debounced decode-mode lookup: try the password against each vault entry
+    // (one PBKDF2 derivation per entry, so never run this per keystroke).
+    async function runDecodePasswordSearch(pwd) {
+        const matched = await searchHistoryByPassword(pwd);
+        // Ignore stale results if the field changed while deriving
+        if (elements.basementenTxPassword.value !== pwd) return;
+
+        if (matched) {
+            basementenDecryptedKey = matched.decryptedKey;
+            elements.textInput.disabled = false;
+            elements.textInput.placeholder = "Enter ciphertext to decrypt...";
+
+            elements.basementenAutoRecognizePanel.classList.remove('hidden', 'danger');
+            elements.basementenAutoRecognizePanel.classList.add('success');
+            elements.basementenAutoStatusTitle.innerHTML = `<i data-lucide="check-circle"></i> Key Recovered Successfully`;
+            elements.basementenAutoStatusDesc.textContent = `Found matching log entry from ${matched.item.timestamp}. Ready to decrypt.`;
+            if (window.lucide) window.lucide.createIcons();
+
+            runConversion();
+        } else {
+            basementenDecryptedKey = null;
+            elements.textInput.disabled = true;
+            elements.textInput.value = '';
+            elements.textInput.placeholder = "Please enter the Transaction Password in the control panel to load the key...";
+
+            elements.basementenAutoRecognizePanel.classList.remove('hidden', 'success');
+            elements.basementenAutoRecognizePanel.classList.add('danger');
+            elements.basementenAutoStatusTitle.innerHTML = `<i data-lucide="x-circle"></i> Key Not Found`;
+            elements.basementenAutoStatusDesc.textContent = "No matching transaction log found for this password.";
+            if (window.lucide) window.lucide.createIcons();
+        }
+    }
 
     // Save transaction button click handler
     elements.basementenSaveTx.addEventListener('click', async () => {
@@ -760,22 +1160,22 @@ function bindEvents() {
         const txName = elements.basementenTxName.value.trim();
 
         if (!basementenUnlocked) {
-            alert("Master password must be entered first.");
+            showToast('Master password must be entered first.', 'error');
             return;
         }
 
         if (!inputVal || !outputVal || outputVal.startsWith('[LOCKED') || outputVal.startsWith('LOCKED:')) {
-            alert("Please compose some plaintext and perform encoding first to generate output.");
+            showToast('Compose some plaintext and perform encoding first to generate output.', 'warning');
             return;
         }
 
         const success = await saveBasementenTransaction(inputVal, outputVal, 'encode', basementenKey, txName);
         if (success) {
             navigator.clipboard.writeText(outputVal).then(() => {
-                alert("Transaction saved successfully to vault log and ciphertext output copied to clipboard!");
+                showToast('Transaction saved to vault log and ciphertext copied to clipboard.', 'success');
             }).catch(err => {
                 console.error("Clipboard copy failed on save", err);
-                alert("Transaction saved successfully to vault log!");
+                showToast('Transaction saved to vault log.', 'success');
             }).finally(() => {
                 // Clear and reset all fields
                 elements.textInput.value = '';
@@ -797,11 +1197,11 @@ function bindEvents() {
     elements.basementenCopyOutput.addEventListener('click', () => {
         const val = elements.textOutput.value;
         if (!val || val.startsWith('[LOCKED') || val.startsWith('LOCKED:')) {
-            alert("Nothing to copy or workspace is locked.");
+            showToast('Nothing to copy or workspace is locked.', 'warning');
             return;
         }
         navigator.clipboard.writeText(val).then(() => {
-            alert("Encoded output ciphertext copied to clipboard!");
+            showToast('Encoded ciphertext copied to clipboard.', 'success');
             // Auto save to history when explicitly copied
             saveToHistory(elements.textInput.value, val);
         }).catch(err => {
@@ -823,26 +1223,27 @@ function updateNetworkStatus() {
     if (navigator.onLine) {
         elements.connectionStatus.classList.remove('offline');
         elements.connectionStatus.classList.add('online');
-        elements.connectionStatus.style.borderColor = 'rgba(16, 185, 129, 0.4)';
-        elements.connectionStatus.style.backgroundColor = 'rgba(16, 185, 129, 0.1)';
         elements.connectionText.textContent = "Cached";
+        elements.connectionStatus.title = "Online — app cached for offline use";
     } else {
         elements.connectionStatus.classList.remove('online');
         elements.connectionStatus.classList.add('offline');
-        elements.connectionStatus.style.borderColor = 'rgba(245, 158, 11, 0.4)';
-        elements.connectionStatus.style.backgroundColor = 'rgba(245, 158, 11, 0.1)';
         elements.connectionText.textContent = "Offline Mode";
+        elements.connectionStatus.title = "Offline — running from local cache";
     }
 }
 
 /**
  * Execute Cryptographic Conversion
+ * (async because The Basementen encrypts via WebCrypto; other ciphers are sync)
  */
-function runConversion() {
+async function runConversion() {
     const input = elements.textInput.value;
     if (!input) {
         elements.textOutput.value = '';
         elements.outputStats.textContent = '0 characters';
+        elements.vigenereError.textContent = '';
+        elements.railfenceError.textContent = '';
         renderProcessPlaceholder();
         return;
     }
@@ -859,100 +1260,24 @@ function runConversion() {
             }
         }
         
-        const logContent = `Mode: Anagram Helper\n\n` +
-            `Input Text:  "${input}"\n` +
+        const logContent = `Input Text:  "${input}"\n` +
             `Letters count: ${inputLetterCount}\n\n` +
             `Edit the output panel directly or click the Shuffle icon in the header to randomize.`;
-        renderProcessLog({
-            success: true,
-            content: logContent,
-            steps: []
-        });
-        
+        if (state.showProcess) {
+            renderProcessSteps([{ title: 'Anagram Helper', content: logContent }]);
+        }
+
         elements.outputStats.textContent = `${elements.textOutput.value.length} characters`;
         return;
     }
 
     let resultObj = { result: '', steps: [] };
 
-    // Select cipher algorithm
+    // Dispatch through the cipher registry
     try {
-        switch (state.cipher) {
-            case 'caesar': {
-                const shift = parseInt(elements.caesarShift.value, 10);
-                resultObj = state.mode === 'encode' 
-                    ? Caesar.encode(input, shift, state.retainPunctuation) 
-                    : Caesar.decode(input, shift, state.retainPunctuation);
-                break;
-            }
-            case 'scandicaesar': {
-                const shift = parseInt(elements.scandicaesarShift.value, 10);
-                const variant = elements.scandicaesarLang.value;
-                resultObj = state.mode === 'encode' 
-                    ? ScandiCaesar.encode(input, shift, variant, state.retainPunctuation) 
-                    : ScandiCaesar.decode(input, shift, variant, state.retainPunctuation);
-                break;
-            }
-            case 'rot13':
-                resultObj = state.mode === 'encode'
-                    ? Rot13.encode(input, null, state.retainPunctuation)
-                    : Rot13.decode(input, null, state.retainPunctuation);
-                break;
-            case 'atbash':
-                resultObj = state.mode === 'encode'
-                    ? Atbash.encode(input, null, state.retainPunctuation)
-                    : Atbash.decode(input, null, state.retainPunctuation);
-                break;
-            case 'vigenere': {
-                const key = elements.vigenereKey.value;
-                resultObj = state.mode === 'encode'
-                    ? Vigenere.encode(input, key, state.retainPunctuation)
-                    : Vigenere.decode(input, key, state.retainPunctuation);
-                break;
-            }
-            case 'railfence': {
-                const rails = parseInt(elements.railfenceRails.value, 10);
-                resultObj = state.mode === 'encode'
-                    ? RailFence.encode(input, rails, state.retainPunctuation)
-                    : RailFence.decode(input, rails, state.retainPunctuation);
-                break;
-            }
-            case 'binary':
-                resultObj = state.mode === 'encode'
-                    ? BinaryConverter.encode(input, null, state.retainPunctuation)
-                    : BinaryConverter.decode(input, null, state.retainPunctuation);
-                break;
-            case 'a1z26':
-                resultObj = state.mode === 'encode'
-                    ? A1z26.encode(input, null, state.retainPunctuation)
-                    : A1z26.decode(input, null, state.retainPunctuation);
-                break;
-            case 'binreverse': {
-                resultObj = state.mode === 'encode'
-                    ? BinaryReverse.encode(input, 'fixed', state.retainPunctuation)
-                    : BinaryReverse.decode(input, 'fixed', state.retainPunctuation);
-                break;
-            }
-            case 'basementen': {
-                if (!basementenUnlocked) {
-                    resultObj = { result: "LOCKED: Please enter master password", steps: [] };
-                } else {
-                    if (state.mode === 'decode') {
-                        if (basementenDecryptedKey !== null) {
-                            resultObj = Basementen.decode(input, basementenDecryptedKey, state.retainPunctuation);
-                        } else {
-                            resultObj = { result: "[LOCKED: Enter Transaction Password in the control panel to load key]", steps: [] };
-                        }
-                    } else {
-                        if (basementenTxValid) {
-                            resultObj = Basementen.encode(input, basementenKey, state.retainPunctuation);
-                        } else {
-                            resultObj = { result: "[LOCKED: Set Transaction Password in the control panel to unlock composition]", steps: [] };
-                        }
-                    }
-                }
-                break;
-            }
+        const entry = getCipher(state.cipher);
+        if (entry && entry.run) {
+            resultObj = await entry.run(input, state.mode, { retainPunctuation: state.retainPunctuation });
         }
     } catch (e) {
         resultObj = { result: `Error executing conversion: ${e.message}`, steps: [{ title: 'Execution Failure', content: e.stack }] };
@@ -1135,6 +1460,11 @@ function renderHistory() {
         btnRestore.title = "Restore this transaction";
         btnRestore.innerHTML = `<i data-lucide="folder-input"></i>`;
         btnRestore.addEventListener('click', () => {
+            // Restoring switches cipher outside the sidebar flow; make sure
+            // leaving The Basementen through this path also locks it.
+            if (state.cipher === 'basementen' && item.cipher !== 'basementen') {
+                lockBasementenSession();
+            }
             elements.textInput.value = item.input;
             state.cipher = item.cipher;
             state.mode = item.mode;
@@ -1168,20 +1498,11 @@ function renderHistory() {
 }
 
 /**
- * Format system name to readable name
+ * Format system name to readable name (from the cipher registry)
  */
 function getFriendlyCipherName(id) {
-    const names = {
-        caesar: 'Caesar',
-        rot13: 'ROT13',
-        atbash: 'Atbash',
-        vigenere: 'Vigenere',
-        railfence: 'Rail Fence',
-        binary: 'Binary',
-        a1z26: 'A1Z26',
-        binreverse: 'Binary Reverse'
-    };
-    return names[id] || id;
+    const entry = getCipher(id);
+    return entry ? entry.shortName : id;
 }
 
 // Escape helper for HTML injection safety
@@ -1241,6 +1562,18 @@ function scrambleInputToOutput() {
    ========================================================================== */
 let basementenCryptoKey = null;
 
+// Lock the vault and clear every piece of key material held in memory.
+// Must be called on ANY path that navigates away from The Basementen.
+function lockBasementenSession() {
+    basementenUnlocked = false;
+    basementenKey = '';
+    basementenCryptoKey = null;
+    basementenTxValid = false;
+    basementenDecryptedKey = null;
+    elements.basementenKeyStatus.textContent = 'Locked [Requires Verification]';
+    elements.basementenKeyStatus.classList.add('locked');
+}
+
 // Hex conversion helpers
 function bufToHex(buf) {
     return Array.from(new Uint8Array(buf))
@@ -1283,11 +1616,20 @@ async function deriveKeyFromPassword(password, salt) {
 // Generate secure random key (40 chars from 92-char printable pool for >256 bits entropy)
 function generate256BitKey() {
     const pool = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789!@#$%^&*()_+-=[]{}|;:,.<>?\u00e6\u00f8\u00e5\u00c6\u00d8\u00c5";
-    const randomBytes = new Uint8Array(40);
-    window.crypto.getRandomValues(randomBytes);
+    const KEY_LENGTH = 40;
+    // Rejection sampling: bytes >= this limit are discarded so every pool
+    // character is equally likely (256 % pool.length !== 0 would otherwise
+    // bias the first few characters of the pool).
+    const maxUnbiased = 256 - (256 % pool.length);
     let key = '';
-    for (let i = 0; i < 40; i++) {
-        key += pool[randomBytes[i] % pool.length];
+    while (key.length < KEY_LENGTH) {
+        const randomBytes = new Uint8Array(KEY_LENGTH);
+        window.crypto.getRandomValues(randomBytes);
+        for (const byte of randomBytes) {
+            if (byte < maxUnbiased && key.length < KEY_LENGTH) {
+                key += pool[byte % pool.length];
+            }
+        }
     }
     return key;
 }
@@ -1421,21 +1763,18 @@ function renderBasementenLog() {
     if (history.length === 0) {
         elements.basementenLogRows.innerHTML = `
             <tr>
-                <td colspan="4" style="text-align: center; padding: 15px; color: var(--color-text-muted);">No transaction logs found.</td>
+                <td colspan="4" class="log-empty">No transaction logs found.</td>
             </tr>
         `;
         return;
     }
     history.forEach(item => {
         const tr = document.createElement('tr');
-        tr.style.borderBottom = '1px solid var(--border-glass)';
-        
+
         const tdTime = document.createElement('td');
-        tdTime.style.padding = '10px';
         tdTime.textContent = item.timestamp;
 
         const tdName = document.createElement('td');
-        tdName.style.padding = '10px';
         const badge = document.createElement('span');
         badge.className = `history-badge ${item.mode}`;
         badge.textContent = item.mode;
@@ -1445,11 +1784,8 @@ function renderBasementenLog() {
 
         const tdOutput = document.createElement('td');
         tdOutput.className = 'io-cell';
-        tdOutput.style.padding = '10px';
         const revealOutputBtn = document.createElement('span');
-        revealOutputBtn.style.color = 'var(--color-primary)';
-        revealOutputBtn.style.cursor = 'pointer';
-        revealOutputBtn.style.textDecoration = 'underline';
+        revealOutputBtn.className = 'reveal-link';
         revealOutputBtn.textContent = "[Locked - Click to Reveal]";
         revealOutputBtn.addEventListener('click', () => {
             promptRevealPlaintext(item, tdOutput, 'output');
@@ -1458,13 +1794,9 @@ function renderBasementenLog() {
 
         const tdKey = document.createElement('td');
         tdKey.className = 'key-cell';
-        tdKey.style.padding = '10px';
-        tdKey.style.wordBreak = 'break-all';
-        
+
         const revealBtn = document.createElement('span');
-        revealBtn.style.color = 'var(--color-primary)';
-        revealBtn.style.cursor = 'pointer';
-        revealBtn.style.textDecoration = 'underline';
+        revealBtn.className = 'reveal-link';
         revealBtn.textContent = "[Locked - Click to Reveal]";
         revealBtn.addEventListener('click', () => {
             promptRevealKey(item, tdKey);
@@ -1483,7 +1815,7 @@ function renderBasementenLog() {
 function promptRevealKey(item, tdKey) {
     elements.basementenRevealModalTitle.textContent = "Reveal Secure Key";
     elements.basementenRevealModalDesc.textContent = "Please enter the unique Transaction Password for this log entry to decrypt and reveal the key.";
-    elements.basementenRevealKeyModal.classList.remove('hidden');
+    openModal(elements.basementenRevealKeyModal);
     elements.basementenRevealKeyPwdInput.value = '';
     elements.basementenRevealKeyError.textContent = '';
     elements.basementenRevealKeyPwdInput.focus();
@@ -1506,9 +1838,9 @@ function promptRevealKey(item, tdKey) {
             const payload = JSON.parse(new TextDecoder().decode(decrypted));
             tdKey.innerHTML = '';
             tdKey.textContent = payload.key;
-            tdKey.style.color = '#10b981';
+            tdKey.classList.add('revealed');
 
-            elements.basementenRevealKeyModal.classList.add('hidden');
+            closeModal(elements.basementenRevealKeyModal);
         } catch (err) {
             console.error(err);
             elements.basementenRevealKeyError.textContent = "Incorrect password. Key decryption failed.";
@@ -1520,7 +1852,7 @@ function promptRevealKey(item, tdKey) {
 function promptRevealPlaintext(item, cell, field) {
     elements.basementenRevealModalTitle.textContent = "Reveal Plaintext Content";
     elements.basementenRevealModalDesc.textContent = "Please enter the unique Transaction Password for this log entry to decrypt and reveal the secret plaintext.";
-    elements.basementenRevealKeyModal.classList.remove('hidden');
+    openModal(elements.basementenRevealKeyModal);
     elements.basementenRevealKeyPwdInput.value = '';
     elements.basementenRevealKeyError.textContent = '';
     elements.basementenRevealKeyPwdInput.focus();
@@ -1546,9 +1878,9 @@ function promptRevealPlaintext(item, cell, field) {
             cell.innerHTML = '';
             cell.textContent = val;
             cell.title = val;
-            cell.style.color = '#10b981';
+            cell.classList.add('revealed');
 
-            elements.basementenRevealKeyModal.classList.add('hidden');
+            closeModal(elements.basementenRevealKeyModal);
         } catch (err) {
             console.error(err);
             elements.basementenRevealKeyError.textContent = "Incorrect password. Verification failed.";
@@ -1558,24 +1890,24 @@ function promptRevealPlaintext(item, cell, field) {
 
 // Reveal Key Modal close listeners
 elements.basementenRevealKeyClose.addEventListener('click', () => {
-    elements.basementenRevealKeyModal.classList.add('hidden');
+    closeModal(elements.basementenRevealKeyModal);
 });
 elements.basementenRevealKeyCancel.addEventListener('click', () => {
-    elements.basementenRevealKeyModal.classList.add('hidden');
+    closeModal(elements.basementenRevealKeyModal);
 });
 
 // Access controller flow
 async function handleBasementenAccess(previousCipher) {
     const hasKey = localStorage.getItem('basementen_encrypted_key');
     if (!hasKey) {
-        showBasementenSetup();
+        showBasementenSetup(previousCipher);
     } else {
         if (!basementenUnlocked) {
             showBasementenUnlock(previousCipher);
         } else {
             // Already unlocked in session
             elements.basementenKeyStatus.textContent = 'Active [Secure 256-bit]';
-            elements.basementenKeyStatus.style.color = '#10b981';
+            elements.basementenKeyStatus.classList.remove('locked');
             saveConfigState();
             setupUIFromState();
             runConversion();
@@ -1623,9 +1955,17 @@ function updatePasswordStrengthMeter(password) {
 // localStorage and fall back to a plain cipher. Used both by the always-available "Wipe &
 // Reset" button and by the "Forgot your password?" recovery link in the unlock modal, since
 // that's the only reachable escape hatch when someone can't remember their master password.
-// Returns true if the user confirmed and the wipe happened, false if they backed out.
-function wipeBasementenWorkspace(confirmMessage) {
-    if (!confirm(confirmMessage)) {
+// Irreversible, so the confirm requires typing WIPE before it unlocks.
+// Resolves true if the user confirmed and the wipe happened, false if they backed out.
+async function wipeBasementenWorkspace(confirmMessage) {
+    const ok = await showConfirm({
+        title: 'Wipe & Reset The Basementen',
+        message: confirmMessage,
+        confirmLabel: 'Wipe Everything',
+        danger: true,
+        typePhrase: 'WIPE'
+    });
+    if (!ok) {
         return false;
     }
 
@@ -1633,11 +1973,7 @@ function wipeBasementenWorkspace(confirmMessage) {
     localStorage.removeItem('basementen_salt');
     localStorage.removeItem('basementen_iv');
     localStorage.removeItem('basementen_history');
-    basementenUnlocked = false;
-    basementenKey = '';
-    basementenCryptoKey = null;
-    elements.basementenKeyStatus.textContent = 'Locked [Requires Verification]';
-    elements.basementenKeyStatus.style.color = '#ef4444';
+    lockBasementenSession();
 
     state.cipher = 'caesar';
     saveConfigState();
@@ -1647,8 +1983,8 @@ function wipeBasementenWorkspace(confirmMessage) {
 }
 
 // 10-second countdown security warning and setup form
-function showBasementenSetup() {
-    elements.basementenSetupModal.classList.remove('hidden');
+function showBasementenSetup(previousCipher) {
+    openModal(elements.basementenSetupModal);
 
     // Reset timer state
     let count = 10;
@@ -1665,6 +2001,7 @@ function showBasementenSetup() {
     elements.basementenSetupSubmit.disabled = true;
 
     // Reset and wire up the live password strength meter
+    elements.basementenSetupError.textContent = '';
     updatePasswordStrengthMeter('');
     elements.basementenSetupPwdInput.oninput = (e) => {
         updatePasswordStrengthMeter(e.target.value);
@@ -1684,18 +2021,32 @@ function showBasementenSetup() {
         }
     }, 1000);
 
+    // Cancel (header X, Escape, or overlay click): abort setup and go back
+    // to whatever cipher was active before The Basementen was selected.
+    elements.basementenSetupCancel.onclick = () => {
+        clearInterval(interval);
+        elements.basementenSetupPwdInput.value = '';
+        elements.basementenSetupConfirmInput.value = '';
+        closeModal(elements.basementenSetupModal);
+        state.cipher = previousCipher || 'caesar';
+        saveConfigState();
+        setupUIFromState();
+        runConversion();
+    };
+
     // Form submit listener
     form.onsubmit = async (e) => {
         e.preventDefault();
+        elements.basementenSetupError.textContent = '';
         const password = elements.basementenSetupPwdInput.value;
         const confirm = elements.basementenSetupConfirmInput.value;
 
         if (password.length < 10) {
-            alert("Password must be at least 10 characters.");
+            elements.basementenSetupError.textContent = 'Password must be at least 10 characters.';
             return;
         }
         if (password !== confirm) {
-            alert("Passwords do not match.");
+            elements.basementenSetupError.textContent = 'Passwords do not match.';
             return;
         }
 
@@ -1727,34 +2078,34 @@ function showBasementenSetup() {
 
             // Update UI status
             elements.basementenKeyStatus.textContent = 'Active [Secure 256-bit]';
-            elements.basementenKeyStatus.style.color = '#10b981';
+            elements.basementenKeyStatus.classList.remove('locked');
 
             // Clean inputs
             elements.basementenSetupPwdInput.value = '';
             elements.basementenSetupConfirmInput.value = '';
             
-            elements.basementenSetupModal.classList.add('hidden');
+            closeModal(elements.basementenSetupModal);
             saveConfigState();
             setupUIFromState();
             runConversion();
-            alert("Master Password saved and 256-bit keyword generated successfully.");
+            showToast('Master password saved and 256-bit keyword generated.', 'success');
         } catch (err) {
             console.error(err);
-            alert("Error setting up encryption key: " + err.message);
+            showToast('Error setting up encryption key: ' + err.message, 'error', 6000);
         }
     };
 }
 
 // Unlock with master password verification
 function showBasementenUnlock(previousCipher) {
-    elements.basementenUnlockModal.classList.remove('hidden');
+    openModal(elements.basementenUnlockModal);
     elements.basementenUnlockPwdInput.value = '';
     elements.basementenUnlockError.textContent = '';
     elements.basementenUnlockPwdInput.focus();
 
     // Cancel lock: revert back to previous cipher
     elements.basementenUnlockCancel.onclick = () => {
-        elements.basementenUnlockModal.classList.add('hidden');
+        closeModal(elements.basementenUnlockModal);
         state.cipher = previousCipher || 'caesar';
         saveConfigState();
         setupUIFromState();
@@ -1763,10 +2114,10 @@ function showBasementenUnlock(previousCipher) {
 
     // Forgotten password: this modal is the only place someone locked out can reach a reset,
     // since the normal "Wipe & Reset" button lives behind the very unlock screen they're stuck on.
-    elements.basementenUnlockForgot.onclick = () => {
-        if (wipeBasementenWorkspace("WARNING: This will permanently erase your master password, generated key, and all saved transaction history for The Basementen. This cannot be undone. Continue?")) {
-            elements.basementenUnlockModal.classList.add('hidden');
-            alert("The Basementen workspace has been wiped. Select this cipher again to set a new master password.");
+    elements.basementenUnlockForgot.onclick = async () => {
+        if (await wipeBasementenWorkspace("This will permanently erase your master password, generated key, and all saved transaction history for The Basementen. This cannot be undone.")) {
+            closeModal(elements.basementenUnlockModal);
+            showToast('The Basementen workspace has been wiped. Select the cipher again to set a new master password.', 'success', 5000);
         }
     };
 
@@ -1804,9 +2155,9 @@ function showBasementenUnlock(previousCipher) {
             basementenCryptoKey = aesKey;
 
             elements.basementenKeyStatus.textContent = 'Active [Secure 256-bit]';
-            elements.basementenKeyStatus.style.color = '#10b981';
+            elements.basementenKeyStatus.classList.remove('locked');
 
-            elements.basementenUnlockModal.classList.add('hidden');
+            closeModal(elements.basementenUnlockModal);
             saveConfigState();
             setupUIFromState();
             runConversion();
