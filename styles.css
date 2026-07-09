@@ -950,49 +950,6 @@ textarea {
     text-align: center;
 }
 
-/* Local IP Config Panel */
-.ip-config-container {
-    background: rgba(245, 158, 11, 0.05);
-    border: 1px solid rgba(245, 158, 11, 0.2);
-    border-radius: var(--radius-md);
-    padding: 12px;
-    margin-bottom: 1.25rem;
-    display: flex;
-    flex-direction: column;
-    gap: 8px;
-}
-
-.ip-config-container label {
-    font-size: 0.8rem;
-    font-weight: 600;
-    color: var(--color-warning);
-    display: flex;
-    align-items: center;
-    gap: 6px;
-}
-
-.ip-config-container label svg {
-    width: 14px;
-    height: 14px;
-}
-
-.ip-input-row {
-    display: flex;
-    gap: 8px;
-}
-
-.ip-input-row input {
-    flex-grow: 1;
-    padding: 6px 10px;
-    font-size: 0.8rem;
-    background-color: rgba(0, 0, 0, 0.4);
-}
-
-.ip-help {
-    font-size: 0.7rem;
-    color: var(--color-text-muted);
-}
-
 .modal-tip {
     font-size: 0.75rem;
     color: var(--color-text-secondary);
@@ -1013,44 +970,6 @@ textarea {
     flex-shrink: 0;
     color: var(--color-warning);
     margin-top: 2px;
-}
-
-.modal-divider {
-    text-align: center;
-    position: relative;
-    margin: 1.5rem 0;
-}
-
-.modal-divider::before {
-    content: '';
-    position: absolute;
-    top: 50%;
-    left: 0;
-    right: 0;
-    height: 1px;
-    background: var(--border-glass);
-    z-index: 1;
-}
-
-.modal-divider span {
-    background: #111827;
-    padding: 0 10px;
-    font-size: 0.7rem;
-    color: var(--color-text-muted);
-    letter-spacing: 0.1em;
-    font-weight: 700;
-    position: relative;
-    z-index: 2;
-}
-
-.binary-downloads {
-    display: flex;
-    flex-direction: column;
-    gap: 8px;
-}
-
-.binary-btn {
-    width: 100%;
 }
 
 @keyframes fadeIn {
@@ -1489,23 +1408,44 @@ textarea {
     font-size: 13px;
 }
 
-.log-table thead tr {
-    border-bottom: 1px solid var(--border-glass);
-    background: rgba(255, 255, 255, 0.02);
-    color: var(--color-text-primary);
-}
-
-.log-table tbody tr {
-    border-bottom: 1px solid var(--border-glass);
-}
-
 .log-table th,
 .log-table td {
     padding: 10px;
+    border-bottom: 1px solid var(--border-glass);
+}
+
+.log-table td {
+    color: var(--color-text-secondary);
+}
+
+.log-table th {
+    font-weight: 600;
+    color: var(--color-text-primary);
+    background: rgba(255, 255, 255, 0.03);
 }
 
 .log-table th.key-col {
     font-family: var(--font-mono);
+}
+
+.log-table td.key-cell {
+    font-family: var(--font-mono);
+    color: var(--color-primary);
+    word-break: break-all;
+    font-size: 11px;
+    max-width: 160px;
+}
+
+.log-table td.io-cell {
+    max-width: 120px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.log-table tbody tr:hover td {
+    background: rgba(255, 255, 255, 0.01);
+    color: var(--color-text-primary);
 }
 
 .log-empty {
@@ -1616,86 +1556,9 @@ textarea {
     }
 }
 
-/* Anagram Helper Styles */
-.anagram-tile {
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    width: 32px;
-    height: 32px;
-    background: rgba(255, 255, 255, 0.08);
-    border: 1px solid rgba(255, 255, 255, 0.15);
-    border-radius: 6px;
-    font-weight: 600;
-    font-size: 0.95rem;
-    color: var(--color-text-primary);
-    cursor: pointer;
-    user-select: none;
-    transition: all 0.2s ease;
-}
-
-.anagram-tile:hover {
-    background: rgba(255, 255, 255, 0.15);
-    border-color: var(--color-primary);
-    transform: translateY(-2px);
-    box-shadow: 0 4px 12px rgba(59, 130, 246, 0.15);
-}
-
-.anagram-tile.used {
-    background: rgba(16, 185, 129, 0.15);
-    border-color: #10b981;
-    color: #10b981;
-    opacity: 0.5;
-}
-
-.anagram-tile.excess {
-    background: rgba(239, 68, 68, 0.15);
-    border-color: #ef4444;
-    color: #ef4444;
-}
-
 /* ==========================================================================
    THE BASEMENTEN SECURE CIPHER STYLES
    ========================================================================== */
-#basementen-log-modal table {
-    width: 100%;
-    border-collapse: collapse;
-}
-
-#basementen-log-modal th,
-#basementen-log-modal td {
-    padding: 12px 10px;
-    border-bottom: 1px solid var(--border-glass);
-    text-align: left;
-    color: var(--color-text-secondary);
-}
-
-#basementen-log-modal th {
-    font-weight: 600;
-    color: var(--color-text-primary);
-    background: rgba(255, 255, 255, 0.03);
-}
-
-#basementen-log-modal td.key-cell {
-    font-family: var(--font-mono);
-    color: var(--color-primary);
-    word-break: break-all;
-    font-size: 11px;
-    max-width: 160px;
-}
-
-#basementen-log-modal td.io-cell {
-    max-width: 120px;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-}
-
-#basementen-log-modal tr:hover td {
-    background: rgba(255, 255, 255, 0.01);
-    color: var(--color-text-primary);
-}
-
 #setup-countdown-container {
     background: rgba(255, 255, 255, 0.03);
     border: 1px dashed var(--border-glass);
