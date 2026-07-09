@@ -4,6 +4,14 @@ An offline-first cipher encoder/decoder with step-by-step process visualization.
 
 Created by Zethrel.
 
+## ⬇️ Get the app (no setup needed)
+
+**Windows:** [**Download BasementenAegis.exe**](https://github.com/Zethrel/Basementen-Aegis/raw/main/dist/BasementenAegis.exe) — save it anywhere and double-click it. No installation, no Python, no commands.
+
+> **First launch:** Windows may warn about an unrecognized publisher (the app is self-signed, not registered with Microsoft). Click **More info → Run anyway**. The app then offers a one-time certificate prompt — accepting it stops the warnings on that PC. Requires the Edge WebView2 runtime, which is built into Windows 10 and 11.
+
+**Or skip the download entirely:** use it in your browser at [zethrel.github.io/Basementen-Aegis](https://zethrel.github.io/Basementen-Aegis/) — on a phone or desktop you can install it as an app from the browser menu, and it keeps working offline.
+
 ## Ciphers
 
 Caesar · ROT13 · Atbash · Vigenère · Rail Fence · Binary Converter · A1Z26 · Binary Reverse (custom) · Scandi Caesar (Danish/Norwegian/Swedish alphabets) · Elder Futhark runes · Morse code (with Æ/Ø/Å) · Anagram Helper · Caesar Brute Force helper (cracks unknown shifts, English or Scandinavian alphabets)
