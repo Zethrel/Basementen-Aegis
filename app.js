@@ -14,6 +14,7 @@ import {
     ScandiCaesar,
     Futhark,
     Morse,
+    CaesarBruteForce,
     Basementen
 } from './ciphers.js';
 
@@ -54,6 +55,7 @@ const elements = {
     scandicaesarShiftDown: document.getElementById('scandicaesar-shift-down'),
     scandicaesarShiftUp: document.getElementById('scandicaesar-shift-up'),
     scandicaesarLang: document.getElementById('scandicaesar-lang'),
+    caesarbruteAlphabet: document.getElementById('caesarbrute-alphabet'),
     vigenereKey: document.getElementById('vigenere-key'),
     vigenereError: document.getElementById('vigenere-error'),
     railfenceRails: document.getElementById('railfence-rails'),
@@ -176,7 +178,8 @@ const CIPHERS = [
     },
     {
         id: 'anagram', name: 'Anagram Helper', shortName: 'Anagram', icon: 'shuffle',
-        badge: { text: 'Helper', className: 'badge-helper' }, paramGroup: 'param-anagram'
+        badge: { text: 'Helper', className: 'badge-helper' }, paramGroup: 'param-anagram',
+        modeless: true
     },
     {
         id: 'atbash', name: 'Atbash Cipher', shortName: 'Atbash', icon: 'shuffle', paramGroup: 'param-none',
@@ -196,6 +199,13 @@ const CIPHERS = [
         run: (input, mode, opts) => mode === 'encode'
             ? BinaryReverse.encode(input, 'fixed', opts.retainPunctuation)
             : BinaryReverse.decode(input, 'fixed', opts.retainPunctuation)
+    },
+    {
+        id: 'caesarbrute', name: 'Caesar Brute Force', shortName: 'Caesar Brute', icon: 'search',
+        badge: { text: 'Helper', className: 'badge-helper' }, paramGroup: 'param-caesarbrute',
+        modeless: true,
+        ioLabels: { input: 'Ciphertext Input', output: 'Candidate Plaintexts' },
+        run: (input) => CaesarBruteForce.analyze(input, elements.caesarbruteAlphabet.value)
     },
     {
         id: 'caesar', name: 'Caesar Cipher', shortName: 'Caesar', icon: 'key-round', paramGroup: 'param-caesar',
@@ -646,9 +656,17 @@ function setupUIFromState() {
         elements.modeEncode.classList.remove('active');
         elements.modeDecode.classList.add('active');
         document.body.classList.add('mode-decode');
-        
+
         elements.inputPanelTitle.textContent = 'Ciphertext Input';
         elements.outputPanelTitle.textContent = 'Plaintext Output';
+    }
+
+    // Registry entries can override the mode-based panel titles
+    // (e.g. the brute-force helper takes ciphertext regardless of mode)
+    const titleEntry = getCipher(state.cipher);
+    if (titleEntry && titleEntry.ioLabels) {
+        elements.inputPanelTitle.textContent = titleEntry.ioLabels.input;
+        elements.outputPanelTitle.textContent = titleEntry.ioLabels.output;
     }
 
     // Handle Basementen Encode mode panel visibility override
@@ -730,13 +748,20 @@ function showActiveParameterGroup() {
         group.classList.remove('active-param');
     });
 
-    // Show correct one and handle output panel layout based on state
-    if (state.cipher === 'anagram') {
+    // Modeless tools (helpers) have no encode/decode distinction: force
+    // encode mode and hide the selector.
+    const activeEntry = getCipher(state.cipher);
+    if (activeEntry && activeEntry.modeless) {
         state.mode = 'encode';
         elements.modeEncode.classList.add('active');
         elements.modeDecode.classList.remove('active');
         elements.modeSelector.classList.add('hidden');
-        
+    } else {
+        elements.modeSelector.classList.remove('hidden');
+    }
+
+    // Anagram-specific output panel behavior (editable output + shuffle)
+    if (state.cipher === 'anagram') {
         elements.textOutput.readOnly = false;
         elements.textOutput.placeholder = "Type your anagram here...";
         elements.btnShuffleOutput.classList.remove('hidden');
@@ -745,7 +770,6 @@ function showActiveParameterGroup() {
             scrambleInputToOutput();
         }
     } else {
-        elements.modeSelector.classList.remove('hidden');
         elements.textOutput.readOnly = true;
         elements.textOutput.placeholder = "Ciphertext output will appear here...";
         elements.btnShuffleOutput.classList.add('hidden');
@@ -855,6 +879,11 @@ function bindEvents() {
 
     // Scandi Caesar Language Select
     elements.scandicaesarLang.addEventListener('change', () => {
+        runConversion();
+    });
+
+    // Caesar Brute Force Alphabet Select
+    elements.caesarbruteAlphabet.addEventListener('change', () => {
         runConversion();
     });
 

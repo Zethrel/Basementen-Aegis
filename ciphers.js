@@ -992,7 +992,69 @@ export const Morse = {
 };
 
 /**
- * 12. THE BASEMENTEN CIPHER
+ * 12. CAESAR BRUTE FORCE (helper)
+ * Decodes the input with every possible shift of the chosen alphabet so an
+ * unknown Caesar key can be cracked by eye. Supports the plain English
+ * alphabet and both Scandinavian variants (29 letters including Æ/Ø/Å or
+ * Å/Ä/Ö), matching the Scandi Caesar cipher.
+ */
+const BRUTE_ALPHABETS = {
+    'en': {
+        label: 'English (A-Z, 26 letters)',
+        upper: "ABCDEFGHIJKLMNOPQRSTUVWXYZ",
+        lower: "abcdefghijklmnopqrstuvwxyz"
+    },
+    'dk-no': {
+        label: 'Danish & Norwegian (A-Z + Æ, Ø, Å, 29 letters)',
+        upper: SCANDI_ALPHABETS['dk-no'].upper,
+        lower: SCANDI_ALPHABETS['dk-no'].lower
+    },
+    'se': {
+        label: 'Swedish (A-Z + Å, Ä, Ö, 29 letters)',
+        upper: SCANDI_ALPHABETS['se'].upper,
+        lower: SCANDI_ALPHABETS['se'].lower
+    }
+};
+
+export const CaesarBruteForce = {
+    analyze(text, alphabetKey) {
+        const alphabet = BRUTE_ALPHABETS[alphabetKey] || BRUTE_ALPHABETS['en'];
+        const size = alphabet.upper.length;
+
+        const decodeWithShift = (shift) => {
+            let out = '';
+            for (const char of text) {
+                let idx = alphabet.upper.indexOf(char);
+                if (idx !== -1) {
+                    out += alphabet.upper[(idx - shift + size) % size];
+                    continue;
+                }
+                idx = alphabet.lower.indexOf(char);
+                if (idx !== -1) {
+                    out += alphabet.lower[(idx - shift + size) % size];
+                    continue;
+                }
+                out += char;
+            }
+            return out;
+        };
+
+        const lines = [];
+        for (let shift = 0; shift < size; shift++) {
+            lines.push(`Shift ${String(shift).padStart(2, '0')}: ${decodeWithShift(shift)}`);
+        }
+
+        const steps = [{
+            title: "Brute Force Analysis",
+            content: `Alphabet: ${alphabet.label}\nTried all ${size} possible shifts (shift 00 is the unmodified input).\n\nScan the output for the line that reads as plain language - its shift number is the key the message was encoded with.`
+        }];
+
+        return { result: lines.join('\n'), steps };
+    }
+};
+
+/**
+ * 13. THE BASEMENTEN CIPHER
  *
  * Messages are encrypted with AES-256-GCM via WebCrypto, keyed by the vault's
  * random 40-character keyword (hashed with SHA-256 to produce the AES key \u2014
