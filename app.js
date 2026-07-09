@@ -263,13 +263,13 @@ const CIPHERS = [
     {
         id: 'basementen', name: 'The Basementen', shortName: 'The Basementen', icon: 'shield-alert',
         badge: { text: 'Secure', className: 'badge-secure' }, paramGroup: 'param-basementen',
-        run: async (input, mode, opts) => {
+        run: async (input, mode) => {
             if (!basementenUnlocked) {
                 return { result: "LOCKED: Please enter master password", steps: [] };
             }
             if (mode === 'decode') {
                 if (basementenDecryptedKey !== null) {
-                    return Basementen.decode(input, basementenDecryptedKey, opts.retainPunctuation);
+                    return Basementen.decode(input, basementenDecryptedKey);
                 }
                 return { result: "[LOCKED: Enter Transaction Password in the control panel to load key]", steps: [] };
             }
@@ -591,10 +591,32 @@ function showUpdateToast(waitingWorker) {
 }
 
 /**
+ * One-time migration from the pre-rebrand localStorage keys, so existing
+ * users keep their settings and history under the Basementen Aegis names.
+ */
+function migrateLegacyStorage() {
+    const migrations = [
+        ['cipher_craft_state', 'aegis_state'],
+        ['cipher_craft_history', 'aegis_history']
+    ];
+    for (const [oldKey, newKey] of migrations) {
+        const oldValue = localStorage.getItem(oldKey);
+        if (oldValue !== null) {
+            if (localStorage.getItem(newKey) === null) {
+                localStorage.setItem(newKey, oldValue);
+            }
+            localStorage.removeItem(oldKey);
+        }
+    }
+}
+
+/**
  * Load state from localStorage
  */
 function loadSavedState() {
-    const saved = localStorage.getItem('cipher_craft_state');
+    migrateLegacyStorage();
+
+    const saved = localStorage.getItem('aegis_state');
     if (saved) {
         try {
             const parsed = JSON.parse(saved);
@@ -607,7 +629,7 @@ function loadSavedState() {
         }
     }
     
-    const savedHistory = localStorage.getItem('cipher_craft_history');
+    const savedHistory = localStorage.getItem('aegis_history');
     if (savedHistory) {
         try {
             state.history = JSON.parse(savedHistory);
@@ -628,7 +650,7 @@ function saveConfigState() {
         retainPunctuation: state.retainPunctuation,
         showProcess: state.showProcess
     };
-    localStorage.setItem('cipher_craft_state', JSON.stringify(config));
+    localStorage.setItem('aegis_state', JSON.stringify(config));
 }
 
 /**
@@ -787,7 +809,9 @@ function showActiveParameterGroup() {
  */
 function bindEvents() {
     // Cipher Select Buttons
-    let previousCipher = 'caesar';
+    // Start from the loaded cipher (not a hardcoded default) so cancelling the
+    // very first Basementen unlock returns to where the user actually was.
+    let previousCipher = state.cipher !== 'basementen' ? state.cipher : 'caesar';
     elements.cipherBtns.forEach(btn => {
         btn.addEventListener('click', () => {
             const selectedCipher = btn.dataset.cipher;
@@ -975,7 +999,7 @@ function bindEvents() {
     // Clear History Action
     elements.btnClearHistory.addEventListener('click', () => {
         state.history = [];
-        localStorage.removeItem('cipher_craft_history');
+        localStorage.removeItem('aegis_history');
         renderHistory();
     });
 
@@ -1441,7 +1465,7 @@ function saveToHistory(input, output) {
         state.history.pop();
     }
 
-    localStorage.setItem('cipher_craft_history', JSON.stringify(state.history));
+    localStorage.setItem('aegis_history', JSON.stringify(state.history));
     renderHistory();
 }
 
@@ -1526,7 +1550,7 @@ function renderHistory() {
         btnDel.innerHTML = `<i data-lucide="trash"></i>`;
         btnDel.addEventListener('click', () => {
             state.history = state.history.filter(h => h.id !== item.id);
-            localStorage.setItem('cipher_craft_history', JSON.stringify(state.history));
+            localStorage.setItem('aegis_history', JSON.stringify(state.history));
             renderHistory();
         });
 
