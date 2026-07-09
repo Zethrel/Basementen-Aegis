@@ -1174,6 +1174,28 @@ textarea {
     min-height: 14px;
 }
 
+/* Inline "Verifying password…" indicator shown while the debounced
+   PBKDF2 password checks run (they take a moment by design). */
+.field-verifying {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    color: var(--color-primary);
+    font-size: 11px;
+    font-weight: 600;
+    margin-top: 4px;
+}
+
+.field-verifying svg {
+    width: 12px;
+    height: 12px;
+    animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+    to { transform: rotate(360deg); }
+}
+
 .basementen-btn-row {
     display: flex;
     gap: 8px;

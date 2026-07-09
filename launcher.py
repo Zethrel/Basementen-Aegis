@@ -141,9 +141,11 @@ def main():
     log(f"Resource path: {resource_path('.')}")
 
     # Check if files exist in the resource directory
-    expected_files = ['index.html', 'styles.css', 'app.js', 'ciphers.js', 'sw.js', 'manifest.json',
-                       'logo.png', 'icon.png', 'lucide.min.js', 'qrcode.js', 'fonts/fonts.css',
-                       'fonts/outfit.woff2', 'fonts/jetbrains-mono.woff2', 'AegisRoot.cer']
+    expected_files = ['index.html', 'styles.css', 'app.js', 'dom.js', 'state.js', 'ui.js',
+                       'registry.js', 'history.js', 'vault.js', 'ciphers.js', 'sw.js',
+                       'manifest.json', 'logo.png', 'icon.png', 'lucide.min.js', 'qrcode.js',
+                       'fonts/fonts.css', 'fonts/outfit.woff2', 'fonts/jetbrains-mono.woff2',
+                       'AegisRoot.cer']
     for file in expected_files:
         path = resource_path(file)
         exists = os.path.exists(path)

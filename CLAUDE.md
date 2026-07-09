@@ -40,11 +40,17 @@ Build and sign on the same machine — the certificate lives in that machine's u
 
 ## Architecture
 
-Two JavaScript files carry almost all the logic:
+The web app is a set of ES modules with `app.js` as the entry point (the only file `index.html` loads with `<script type="module">`):
 
 - **`ciphers.js`** — pure cipher algorithms, no DOM access. Each cipher is an exported object with `encode(text, param, retainPunctuation)` / `decode(...)` methods that return `{ result: string, steps: Array<{ title, content }> }`. The `steps` array drives the step-by-step process panel in the UI. Simple substitution ciphers (Caesar, Atbash, ScandiCaesar, Vigenère) share the `processChars()` per-character loop helper. The Basementen cipher is the exception: it's `async` (WebCrypto AES-256-GCM) and returns empty `steps`.
 
-- **`app.js`** — the UI controller. The central piece is the `CIPHERS` registry array: each entry declares `id`, `name`, `shortName`, `icon` (a Lucide icon name), `paramGroup` (the id of a parameter panel in `index.html`), optional `badge`, `modeless: true` for helpers with no encode/decode split, optional `ioLabels`, and a `run(input, mode, opts)` function that reads its parameters from `elements` and calls into `ciphers.js`. The sidebar nav is generated from this registry.
+- **`registry.js`** — the `CIPHERS` registry array, the single source of truth for every cipher: each entry declares `id`, `name`, `shortName`, `icon` (a Lucide icon name), `paramGroup` (the id of a parameter panel in `index.html`), optional `badge`, `modeless: true` for helpers with no encode/decode split, optional `ioLabels`, and a `run(input, mode, opts)` function that reads its parameters from `elements` and calls into `ciphers.js`. The sidebar nav is generated from this registry (`renderCipherNav`).
+
+- **`app.js`** — the controller/entry module: `init()`, `runConversion()` dispatching through the registry, the process panel rendering, `setupUIFromState()`, all cipher-agnostic event handlers, and service-worker registration.
+
+- **`dom.js`** (`elements` map of every DOM node), **`state.js`** (shared `state` object + localStorage load/save/migration), **`ui.js`** (modals, toasts, `showConfirm`), **`history.js`** (the plaintext history panel + debounced auto-save), **`vault.js`** (everything Basementen: `vaultSession` in-memory state, PBKDF2/crypto helpers, setup/unlock/wipe flows, the encrypted transaction log, and `bindVaultEvents()`).
+
+  Note: `vault.js` and `history.js` deliberately import `setupUIFromState`/`runConversion` back from `app.js` (circular imports). This is safe because those calls only happen at runtime from event handlers, never during module evaluation — keep it that way when adding top-level code to these modules.
 
 - **`index.html`** — holds one `.param-group` div per parameter panel (`param-caesar`, `param-vigenere`, …, and `param-none` for parameterless ciphers). `showActiveParameterGroup()` in `app.js` toggles them by id.
 
@@ -56,10 +62,9 @@ Two JavaScript files carry almost all the logic:
 
 ### Adding or changing a cipher
 
-1. Implement the algorithm as an exported object in `ciphers.js`, returning `{ result, steps }`.
-2. Import it in `app.js` and add an entry to the `CIPHERS` registry.
-3. If it needs parameters, add a `.param-group` div in `index.html` and wire the controls into `elements` / `bindEvents()` in `app.js`; otherwise use `paramGroup: 'param-none'`.
-4. Add a friendly name in `getFriendlyCipherName()` if the history panel should label it.
+1. Implement the algorithm as an exported object in `ciphers.js`, returning `{ result, steps }`. Add test cases in `tests/ciphers.test.mjs`.
+2. Import it in `registry.js` and add an entry to the `CIPHERS` registry (the history panel labels entries from the registry's `shortName` automatically).
+3. If it needs parameters, add a `.param-group` div in `index.html`, register the controls in `elements` (`dom.js`), and wire them in `bindEvents()` in `app.js`; otherwise use `paramGroup: 'param-none'`.
 
 ### Service worker cache version — always bump it
 
