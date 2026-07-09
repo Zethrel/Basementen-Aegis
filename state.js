@@ -43,7 +43,7 @@ export function loadSavedState() {
     if (saved) {
         try {
             const parsed = JSON.parse(saved);
-            state.cipher = parsed.cipher || 'caesar';
+            state.cipher = migrateCipherId(parsed.cipher) || 'caesar';
             state.mode = parsed.mode || 'encode';
             state.retainPunctuation = parsed.retainPunctuation !== undefined ? parsed.retainPunctuation : true;
             state.showProcess = parsed.showProcess !== undefined ? parsed.showProcess : true;
@@ -51,16 +51,27 @@ export function loadSavedState() {
             console.error("Error reading saved state", e);
         }
     }
-    
+
     const savedHistory = localStorage.getItem('aegis_history');
     if (savedHistory) {
         try {
             state.history = JSON.parse(savedHistory);
+            for (const item of state.history) {
+                item.cipher = migrateCipherId(item.cipher);
+            }
         } catch (e) {
             console.error("Error loading history", e);
             state.history = [];
         }
     }
+}
+
+// Retired registry ids are mapped to their successors so old saved state
+// and history entries keep restoring correctly.
+function migrateCipherId(id) {
+    // Scandi Caesar merged into Caesar (alphabet dropdown) — same algorithm.
+    if (id === 'scandicaesar') return 'caesar';
+    return id;
 }
 
 /**

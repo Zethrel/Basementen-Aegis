@@ -18,7 +18,6 @@ import {
     BinaryConverter,
     A1z26,
     BinaryReverse,
-    ScandiCaesar,
     Futhark,
     Morse,
     CaesarBruteForce,
@@ -36,20 +35,36 @@ function assertShape(obj) {
 }
 
 test('Caesar: known value, case and punctuation preserved', () => {
-    const enc = Caesar.encode('Hello, World!', 3, true);
+    const enc = Caesar.encode('Hello, World!', 3, 'en', true);
     assertShape(enc);
     assert.equal(enc.result, 'Khoor, Zruog!');
-    assert.equal(Caesar.decode(enc.result, 3, true).result, 'Hello, World!');
+    assert.equal(Caesar.decode(enc.result, 3, 'en', true).result, 'Hello, World!');
 });
 
-test('Caesar: shift is normalized (negative and > 26)', () => {
-    const base = Caesar.encode('abc', 25, true).result;
-    assert.equal(Caesar.encode('abc', -1, true).result, base);
-    assert.equal(Caesar.encode('abc', 51, true).result, base);
+test('Caesar: shift is normalized to the chosen alphabet size', () => {
+    const base = Caesar.encode('abc', 25, 'en', true).result;
+    assert.equal(Caesar.encode('abc', -1, 'en', true).result, base);
+    assert.equal(Caesar.encode('abc', 51, 'en', true).result, base);
+    // 29-letter alphabet wraps at 29, not 26
+    const baseDk = Caesar.encode('abc', 28, 'dk-no', true).result;
+    assert.equal(Caesar.encode('abc', -1, 'dk-no', true).result, baseDk);
+    assert.equal(Caesar.encode('abc', 57, 'dk-no', true).result, baseDk);
 });
 
 test('Caesar: punctuation skipped when retainPunctuation is false', () => {
-    assert.equal(Caesar.encode('a.b!c', 1, false).result, 'bcd');
+    assert.equal(Caesar.encode('a.b!c', 1, 'en', false).result, 'bcd');
+});
+
+test('Caesar: wrap-around depends on the alphabet', () => {
+    // In English z + 3 wraps to c; in Danish/Norwegian the alphabet
+    // continues ...z, æ, ø, å so z + 3 lands on å.
+    assert.equal(Caesar.encode('z', 3, 'en', true).result, 'c');
+    assert.equal(Caesar.encode('z', 3, 'dk-no', true).result, 'å');
+    assert.equal(Caesar.encode('Z', 3, 'se', true).result, 'Ö');
+});
+
+test('Caesar: unknown variant falls back to English', () => {
+    assert.equal(Caesar.encode('abc', 1, undefined, true).result, 'bcd');
 });
 
 test('ROT13 is its own inverse', () => {
@@ -116,15 +131,15 @@ test('Binary Reverse: randomized encoding still round trips', () => {
     }
 });
 
-test('Scandi Caesar: Æ/Ø/Å round trip in both variants', () => {
+test('Caesar: Æ/Ø/Å round trip in both Scandinavian alphabets', () => {
     const danish = 'Blåbær grød';
-    const encDk = ScandiCaesar.encode(danish, 5, 'dk-no', true);
+    const encDk = Caesar.encode(danish, 5, 'dk-no', true);
     assertShape(encDk);
-    assert.equal(ScandiCaesar.decode(encDk.result, 5, 'dk-no', true).result, danish);
+    assert.equal(Caesar.decode(encDk.result, 5, 'dk-no', true).result, danish);
 
     const swedish = 'Höst på ön';
-    const encSe = ScandiCaesar.encode(swedish, 17, 'se', true);
-    assert.equal(ScandiCaesar.decode(encSe.result, 17, 'se', true).result, swedish);
+    const encSe = Caesar.encode(swedish, 17, 'se', true);
+    assert.equal(Caesar.decode(encSe.result, 17, 'se', true).result, swedish);
 });
 
 test('Elder Futhark: digraphs collapse to single runes and round trip', () => {
@@ -149,7 +164,7 @@ test('Morse: unrecognized codes decode to "?"', () => {
 });
 
 test('Caesar Brute Force: candidate list contains the plaintext at the right shift', () => {
-    const cipher = Caesar.encode('hello world', 7, true).result;
+    const cipher = Caesar.encode('hello world', 7, 'en', true).result;
     const out = CaesarBruteForce.analyze(cipher, 'en');
     assertShape(out);
     assert.ok(out.result.includes('Shift 07: hello world'));

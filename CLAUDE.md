@@ -42,7 +42,7 @@ Build and sign on the same machine — the certificate lives in that machine's u
 
 The web app is a set of ES modules with `app.js` as the entry point (the only file `index.html` loads with `<script type="module">`):
 
-- **`ciphers.js`** — pure cipher algorithms, no DOM access. Each cipher is an exported object with `encode(text, param, retainPunctuation)` / `decode(...)` methods that return `{ result: string, steps: Array<{ title, content }> }`. The `steps` array drives the step-by-step process panel in the UI. Simple substitution ciphers (Caesar, Atbash, ScandiCaesar, Vigenère) share the `processChars()` per-character loop helper. The Basementen cipher is the exception: it's `async` (WebCrypto AES-256-GCM) and returns empty `steps`.
+- **`ciphers.js`** — pure cipher algorithms, no DOM access. Each cipher is an exported object with `encode(text, param, retainPunctuation)` / `decode(...)` methods that return `{ result: string, steps: Array<{ title, content }> }`. The `steps` array drives the step-by-step process panel in the UI. Simple substitution ciphers (Caesar, Atbash, Vigenère) share the `processChars()` per-character loop helper. Caesar takes a `variant` parameter selecting its alphabet from `CAESAR_ALPHABETS` (English or the 29-letter Danish/Norwegian and Swedish sets, shared with the brute-force helper). The Basementen cipher is the exception: it's `async` (WebCrypto AES-256-GCM) and returns empty `steps`.
 
 - **`registry.js`** — the `CIPHERS` registry array, the single source of truth for every cipher: each entry declares `id`, `name`, `shortName`, `icon` (a Lucide icon name), `paramGroup` (the id of a parameter panel in `index.html`), optional `badge`, `modeless: true` for helpers with no encode/decode split, optional `ioLabels`, and a `run(input, mode, opts)` function that reads its parameters from `elements` and calls into `ciphers.js`. The sidebar nav is generated from this registry (`renderCipherNav`).
 
@@ -87,5 +87,5 @@ Persistent state lives in `localStorage` under `aegis_state`, `aegis_history`, a
 
 - Vanilla JS only — no framework, no bundler, no npm. Keep it that way unless asked.
 - Icons come from the bundled Lucide set; `icon:` values in the `CIPHERS` registry are Lucide icon names.
-- Ciphers support Scandinavian alphabets (Æ/Ø/Å, Danish/Norwegian/Swedish variants) where it makes sense — see `ScandiCaesar`, `Morse`, `CaesarBruteForce` for the pattern.
+- Ciphers support Scandinavian alphabets (Æ/Ø/Å, Danish/Norwegian/Swedish variants) where it makes sense — see `CAESAR_ALPHABETS`, `Morse`, `CaesarBruteForce` for the pattern. Retired registry ids (e.g. `scandicaesar`, now merged into `caesar`) are mapped forward in `migrateCipherId()` in `state.js`.
 - `dist/`, `build/`, `AegisRoot.cer`, and `*.exe` are build outputs and are not committed (`BasementenAegis.spec` is the one committed spec file). Built exes are distributed by attaching them to GitHub Releases; the README download link tracks the latest release automatically.

@@ -5,6 +5,7 @@
  * panel, and all cipher-agnostic event handlers.
  */
 
+import { CAESAR_ALPHABETS } from './ciphers.js';
 import { elements } from './dom.js';
 import { state, loadSavedState, saveConfigState } from './state.js';
 import { getCipher, renderCipherNav } from './registry.js';
@@ -359,17 +360,17 @@ function bindEvents() {
     elements.caesarShiftDown.addEventListener('click', () => nudgeSlider(elements.caesarShift, -1));
     elements.caesarShiftUp.addEventListener('click', () => nudgeSlider(elements.caesarShift, 1));
 
-    // Scandi Caesar Shift Slider
-    elements.scandicaesarShift.addEventListener('input', (e) => {
-        elements.scandicaesarShiftValue.textContent = e.target.value;
-        runConversion();
-    });
-
-    elements.scandicaesarShiftDown.addEventListener('click', () => nudgeSlider(elements.scandicaesarShift, -1));
-    elements.scandicaesarShiftUp.addEventListener('click', () => nudgeSlider(elements.scandicaesarShift, 1));
-
-    // Scandi Caesar Language Select
-    elements.scandicaesarLang.addEventListener('change', () => {
+    // Caesar Alphabet Select: the slider's range follows the alphabet size
+    // (0-25 for English, 0-28 for the 29-letter Scandinavian variants).
+    elements.caesarAlphabet.addEventListener('change', () => {
+        const alphabet = CAESAR_ALPHABETS[elements.caesarAlphabet.value] || CAESAR_ALPHABETS['en'];
+        const max = alphabet.upper.length - 1;
+        elements.caesarShift.max = max;
+        elements.caesarShiftMax.textContent = max;
+        if (parseInt(elements.caesarShift.value, 10) > max) {
+            elements.caesarShift.value = max;
+        }
+        elements.shiftValue.textContent = elements.caesarShift.value;
         runConversion();
     });
 

@@ -33,7 +33,7 @@ function getLetterFromIndex(index, isUppercase) {
 
 /**
  * Shared per-character loop used by simple substitution ciphers (Caesar, Atbash,
- * ScandiCaesar, Vigenere). Spaces are always preserved; other non-letter characters
+ * Vigenere). Spaces are always preserved; other non-letter characters
  * are retained or skipped per `retainPunctuation`. `transformLetter(char)` should
  * return { char, step } for recognized letters, or null to fall through to the
  * space/punctuation handling.
@@ -64,48 +64,63 @@ function processChars(text, retainPunctuation, transformLetter) {
 
 /**
  * 1. CAESAR CIPHER
+ * One cipher, three alphabets: plain English A-Z or the Scandinavian
+ * variants with their three extra letters, selected by the `variant`
+ * parameter. The shift wraps across the full chosen alphabet (26 or 29
+ * letters), so 'z' + 3 is 'c' in English but 'å' in Danish/Norwegian.
  */
+export const CAESAR_ALPHABETS = {
+    'en': {
+        label: 'English (26 letters)',
+        upper: "ABCDEFGHIJKLMNOPQRSTUVWXYZ",
+        lower: "abcdefghijklmnopqrstuvwxyz"
+    },
+    'dk-no': {
+        label: 'Danish/Norwegian (29 letters)',
+        upper: "ABCDEFGHIJKLMNOPQRSTUVWXYZÆØÅ",
+        lower: "abcdefghijklmnopqrstuvwxyzæøå"
+    },
+    'se': {
+        label: 'Swedish (29 letters)',
+        upper: "ABCDEFGHIJKLMNOPQRSTUVWXYZÅÄÖ",
+        lower: "abcdefghijklmnopqrstuvwxyzåäö"
+    }
+};
+
+function caesarRun(text, shift, variant, retainPunctuation, direction) {
+    const alphabet = CAESAR_ALPHABETS[variant] || CAESAR_ALPHABETS['en'];
+    const upper = alphabet.upper;
+    const lower = alphabet.lower;
+    const size = upper.length;
+    shift = parseInt(shift, 10) || 0;
+    shift = ((shift % size) + size) % size; // Normalize shift
+
+    const encoding = direction === 'encode';
+    const steps = [{
+        title: "Configuration",
+        content: `Mode: ${encoding ? 'Encode' : 'Decode'}\nAlphabet: ${alphabet.label}\nShift Key: ${shift}\nRetain Punctuation: ${retainPunctuation ? 'Yes' : 'No'}`
+    }];
+
+    const { result, letterSteps } = processChars(text, retainPunctuation, (char) => {
+        const alphabetStr = upper.indexOf(char) !== -1 ? upper : (lower.indexOf(char) !== -1 ? lower : null);
+        if (!alphabetStr) return null;
+        const index = alphabetStr.indexOf(char);
+        const newIndex = encoding ? (index + shift) % size : (index - shift + size) % size;
+        const newChar = alphabetStr[newIndex];
+        return { char: newChar, step: `'${char}' (index ${index}) ${encoding ? '+' : '-'} Shift ${shift} -> index ${newIndex} -> '${newChar}'` };
+    });
+
+    steps.push({ title: "Character Processing", content: letterSteps.join('\n') });
+    return { result, steps };
+}
+
 export const Caesar = {
-    encode(text, shift, retainPunctuation) {
-        shift = parseInt(shift, 10) || 0;
-        shift = ((shift % 26) + 26) % 26; // Normalize shift
-        const steps = [{
-            title: "Configuration",
-            content: `Mode: Encode\nShift Key: ${shift}\nRetain Punctuation: ${retainPunctuation ? 'Yes' : 'No'}`
-        }];
-
-        const { result, letterSteps } = processChars(text, retainPunctuation, (char) => {
-            if (!isLetter(char)) return null;
-            const isUppercase = isUpper(char);
-            const originalIndex = getAlphabetIndex(char);
-            const newIndex = (originalIndex + shift) % 26;
-            const encodedChar = getLetterFromIndex(newIndex, isUppercase);
-            return { char: encodedChar, step: `'${char}' (index ${originalIndex}) + Shift ${shift} -> index ${newIndex} -> '${encodedChar}'` };
-        });
-
-        steps.push({ title: "Character Processing", content: letterSteps.join('\n') });
-        return { result, steps };
+    encode(text, shift, variant, retainPunctuation) {
+        return caesarRun(text, shift, variant, retainPunctuation, 'encode');
     },
 
-    decode(text, shift, retainPunctuation) {
-        shift = parseInt(shift, 10) || 0;
-        shift = ((shift % 26) + 26) % 26; // Normalize shift
-        const steps = [{
-            title: "Configuration",
-            content: `Mode: Decode\nShift Key: ${shift}\nRetain Punctuation: ${retainPunctuation ? 'Yes' : 'No'}`
-        }];
-
-        const { result, letterSteps } = processChars(text, retainPunctuation, (char) => {
-            if (!isLetter(char)) return null;
-            const isUppercase = isUpper(char);
-            const originalIndex = getAlphabetIndex(char);
-            const newIndex = (originalIndex - shift + 26) % 26;
-            const decodedChar = getLetterFromIndex(newIndex, isUppercase);
-            return { char: decodedChar, step: `'${char}' (index ${originalIndex}) - Shift ${shift} -> index ${newIndex} -> '${decodedChar}'` };
-        });
-
-        steps.push({ title: "Character Processing", content: letterSteps.join('\n') });
-        return { result, steps };
+    decode(text, shift, variant, retainPunctuation) {
+        return caesarRun(text, shift, variant, retainPunctuation, 'decode');
     }
 };
 
@@ -118,7 +133,7 @@ export const Rot13 = {
             title: "ROT13 Characteristics",
             content: "ROT13 is a special case of Caesar cipher with a fixed shift of 13.\nIt is self-reciprocal, meaning the same algorithm is used to encode and decode."
         }];
-        const run = Caesar.encode(text, 13, retainPunctuation);
+        const run = Caesar.encode(text, 13, 'en', retainPunctuation);
         steps.push(...run.steps.slice(1)); // Reuse character processing steps
         return { result: run.result, steps };
     },
@@ -127,7 +142,7 @@ export const Rot13 = {
             title: "ROT13 Characteristics",
             content: "ROT13 is a special case of Caesar cipher with a fixed shift of 13.\nIt is self-reciprocal, meaning decoding is identical to encoding (shifting by 13 again)."
         }];
-        const run = Caesar.decode(text, 13, retainPunctuation);
+        const run = Caesar.decode(text, 13, 'en', retainPunctuation);
         steps.push(...run.steps.slice(1));
         return { result: run.result, steps };
     }
@@ -731,71 +746,6 @@ export const BinaryReverse = {
     }
 };
 
-const SCANDI_ALPHABETS = {
-    'dk-no': {
-        upper: "ABCDEFGHIJKLMNOPQRSTUVWXYZÆØÅ",
-        lower: "abcdefghijklmnopqrstuvwxyzæøå"
-    },
-    'se': {
-        upper: "ABCDEFGHIJKLMNOPQRSTUVWXYZÅÄÖ",
-        lower: "abcdefghijklmnopqrstuvwxyzåäö"
-    }
-};
-
-export const ScandiCaesar = {
-    encode(text, shift, variant, retainPunctuation) {
-        const alphabet = SCANDI_ALPHABETS[variant] || SCANDI_ALPHABETS['dk-no'];
-        const upper = alphabet.upper;
-        const lower = alphabet.lower;
-        const size = upper.length;
-        shift = parseInt(shift, 10) || 0;
-        shift = ((shift % size) + size) % size;
-
-        const steps = [{
-            title: "Configuration",
-            content: `Mode: Encode\nVariant: ${variant === 'se' ? 'Swedish' : 'Danish/Norwegian'}\nShift Key: ${shift}\nRetain Punctuation: ${retainPunctuation ? 'Yes' : 'No'}`
-        }];
-
-        const { result, letterSteps } = processChars(text, retainPunctuation, (char) => {
-            const alphabetStr = upper.indexOf(char) !== -1 ? upper : (lower.indexOf(char) !== -1 ? lower : null);
-            if (!alphabetStr) return null;
-            const index = alphabetStr.indexOf(char);
-            const newIndex = (index + shift) % size;
-            const encodedChar = alphabetStr[newIndex];
-            return { char: encodedChar, step: `'${char}' (index ${index}) + Shift ${shift} -> index ${newIndex} -> '${encodedChar}'` };
-        });
-
-        steps.push({ title: "Character Processing", content: letterSteps.join('\n') });
-        return { result, steps };
-    },
-
-    decode(text, shift, variant, retainPunctuation) {
-        const alphabet = SCANDI_ALPHABETS[variant] || SCANDI_ALPHABETS['dk-no'];
-        const upper = alphabet.upper;
-        const lower = alphabet.lower;
-        const size = upper.length;
-        shift = parseInt(shift, 10) || 0;
-        shift = ((shift % size) + size) % size;
-
-        const steps = [{
-            title: "Configuration",
-            content: `Mode: Decode\nVariant: ${variant === 'se' ? 'Swedish' : 'Danish/Norwegian'}\nShift Key: ${shift}\nRetain Punctuation: ${retainPunctuation ? 'Yes' : 'No'}`
-        }];
-
-        const { result, letterSteps } = processChars(text, retainPunctuation, (char) => {
-            const alphabetStr = upper.indexOf(char) !== -1 ? upper : (lower.indexOf(char) !== -1 ? lower : null);
-            if (!alphabetStr) return null;
-            const index = alphabetStr.indexOf(char);
-            const newIndex = (index - shift + size) % size;
-            const decodedChar = alphabetStr[newIndex];
-            return { char: decodedChar, step: `'${char}' (index ${index}) - Shift ${shift} -> index ${newIndex} -> '${decodedChar}'` };
-        });
-
-        steps.push({ title: "Character Processing", content: letterSteps.join('\n') });
-        return { result, steps };
-    }
-};
-
 /**
  * 10. ELDER FUTHARK RUNES
  * Transliteration to/from the 24-rune Elder Futhark (plus Æ/Ø/Å mappings for
@@ -994,25 +944,24 @@ export const Morse = {
 /**
  * 12. CAESAR BRUTE FORCE (helper)
  * Decodes the input with every possible shift of the chosen alphabet so an
- * unknown Caesar key can be cracked by eye. Supports the plain English
- * alphabet and both Scandinavian variants (29 letters including Æ/Ø/Å or
- * Å/Ä/Ö), matching the Scandi Caesar cipher.
+ * unknown Caesar key can be cracked by eye. Uses the same alphabets as the
+ * Caesar cipher (plain English or the 29-letter Scandinavian variants).
  */
 const BRUTE_ALPHABETS = {
     'en': {
         label: 'English (A-Z, 26 letters)',
-        upper: "ABCDEFGHIJKLMNOPQRSTUVWXYZ",
-        lower: "abcdefghijklmnopqrstuvwxyz"
+        upper: CAESAR_ALPHABETS['en'].upper,
+        lower: CAESAR_ALPHABETS['en'].lower
     },
     'dk-no': {
         label: 'Danish & Norwegian (A-Z + Æ, Ø, Å, 29 letters)',
-        upper: SCANDI_ALPHABETS['dk-no'].upper,
-        lower: SCANDI_ALPHABETS['dk-no'].lower
+        upper: CAESAR_ALPHABETS['dk-no'].upper,
+        lower: CAESAR_ALPHABETS['dk-no'].lower
     },
     'se': {
         label: 'Swedish (A-Z + Å, Ä, Ö, 29 letters)',
-        upper: SCANDI_ALPHABETS['se'].upper,
-        lower: SCANDI_ALPHABETS['se'].lower
+        upper: CAESAR_ALPHABETS['se'].upper,
+        lower: CAESAR_ALPHABETS['se'].lower
     }
 };
 

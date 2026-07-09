@@ -11,7 +11,6 @@ import {
     BinaryConverter,
     A1z26,
     BinaryReverse,
-    ScandiCaesar,
     Futhark,
     Morse,
     CaesarBruteForce,
@@ -81,9 +80,10 @@ export const CIPHERS = [
         id: 'caesar', name: 'Caesar Cipher', shortName: 'Caesar', icon: 'key-round', paramGroup: 'param-caesar',
         run: (input, mode, opts) => {
             const shift = parseInt(elements.caesarShift.value, 10);
+            const variant = elements.caesarAlphabet.value;
             return mode === 'encode'
-                ? Caesar.encode(input, shift, opts.retainPunctuation)
-                : Caesar.decode(input, shift, opts.retainPunctuation);
+                ? Caesar.encode(input, shift, variant, opts.retainPunctuation)
+                : Caesar.decode(input, shift, variant, opts.retainPunctuation);
         }
     },
     {
@@ -118,17 +118,6 @@ export const CIPHERS = [
         run: (input, mode, opts) => mode === 'encode'
             ? Rot13.encode(input, null, opts.retainPunctuation)
             : Rot13.decode(input, null, opts.retainPunctuation)
-    },
-    {
-        id: 'scandicaesar', name: 'Scandi Caesar', shortName: 'Scandi Caesar', icon: 'globe',
-        badge: { text: 'Scandi', className: 'badge-scandi' }, paramGroup: 'param-scandicaesar',
-        run: (input, mode, opts) => {
-            const shift = parseInt(elements.scandicaesarShift.value, 10);
-            const variant = elements.scandicaesarLang.value;
-            return mode === 'encode'
-                ? ScandiCaesar.encode(input, shift, variant, opts.retainPunctuation)
-                : ScandiCaesar.decode(input, shift, variant, opts.retainPunctuation);
-        }
     },
     {
         id: 'basementen', name: 'The Basementen', shortName: 'The Basementen', icon: 'shield-alert',
