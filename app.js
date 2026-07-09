@@ -906,23 +906,25 @@ function bindEvents() {
     });
 
     // Copy Action
+    // Lucide replaces <i data-lucide> tags with <svg> elements on render, so
+    // the transient check-mark feedback rebuilds the icon from scratch instead
+    // of mutating an <i> tag that no longer exists after the first render.
+    const setCopyBtnIcon = (name) => {
+        elements.btnCopy.innerHTML = `<i data-lucide="${name}"></i>`;
+        if (window.lucide) window.lucide.createIcons();
+    };
+
     elements.btnCopy.addEventListener('click', () => {
         const text = elements.textOutput.value;
         if (!text) return;
         navigator.clipboard.writeText(text).then(() => {
             // Transient UI feedback
-            const copyIcon = elements.btnCopy.querySelector('i');
-            const originalIcon = copyIcon.getAttribute('data-lucide');
-            copyIcon.setAttribute('data-lucide', 'check');
-            if (window.lucide) window.lucide.createIcons();
-            
+            setCopyBtnIcon('check');
+
             // Add immediately to history when they explicitly copy (as they finished working with it)
             saveToHistory(elements.textInput.value, text);
-            
-            setTimeout(() => {
-                copyIcon.setAttribute('data-lucide', originalIcon);
-                if (window.lucide) window.lucide.createIcons();
-            }, 1500);
+
+            setTimeout(() => setCopyBtnIcon('copy'), 1500);
         });
     });
 
@@ -1268,16 +1270,13 @@ async function runConversion() {
             }
         }
         
-        const logContent = `Mode: Anagram Helper\n\n` +
-            `Input Text:  "${input}"\n` +
+        const logContent = `Input Text:  "${input}"\n` +
             `Letters count: ${inputLetterCount}\n\n` +
             `Edit the output panel directly or click the Shuffle icon in the header to randomize.`;
-        renderProcessLog({
-            success: true,
-            content: logContent,
-            steps: []
-        });
-        
+        if (state.showProcess) {
+            renderProcessSteps([{ title: 'Anagram Helper', content: logContent }]);
+        }
+
         elements.outputStats.textContent = `${elements.textOutput.value.length} characters`;
         return;
     }
