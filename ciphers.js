@@ -797,7 +797,103 @@ export const ScandiCaesar = {
 };
 
 /**
- * 10. THE BASEMENTEN CIPHER
+ * 10. ELDER FUTHARK RUNES
+ * Transliteration to/from the 24-rune Elder Futhark (plus Æ/Ø/Å mappings for
+ * Scandinavian text: ᛇ eihwaz for Æ, and the medieval/younger runes ᚯ for Ø
+ * and ᚬ for Å). Latin letters without their own rune share one: C/K/Q -> ᚲ,
+ * V/W -> ᚹ, Y -> ᛁ, X -> ᚲᛊ. TH and NG are encoded with their single runes
+ * ᚦ and ᛜ, so decoding is not always a perfect character-level round trip.
+ */
+const FUTHARK_DIGRAPHS = { 'th': 'ᚦ', 'ng': 'ᛜ' };
+const FUTHARK_MAP = {
+    'a': 'ᚨ', 'b': 'ᛒ', 'c': 'ᚲ', 'd': 'ᛞ', 'e': 'ᛖ', 'f': 'ᚠ',
+    'g': 'ᚷ', 'h': 'ᚺ', 'i': 'ᛁ', 'j': 'ᛃ', 'k': 'ᚲ', 'l': 'ᛚ',
+    'm': 'ᛗ', 'n': 'ᚾ', 'o': 'ᛟ', 'p': 'ᛈ', 'q': 'ᚲ', 'r': 'ᚱ',
+    's': 'ᛊ', 't': 'ᛏ', 'u': 'ᚢ', 'v': 'ᚹ', 'w': 'ᚹ', 'x': 'ᚲᛊ',
+    'y': 'ᛁ', 'z': 'ᛉ', 'æ': 'ᛇ', 'ø': 'ᚯ', 'å': 'ᚬ'
+};
+
+// Reverse map for decoding; first Latin letter listed for a rune wins
+// (ᚲ -> k, ᚹ -> w, ᛁ -> i), digraph runes decode to their two letters.
+const FUTHARK_REVERSE = (() => {
+    const rev = { 'ᚦ': 'th', 'ᛜ': 'ng', 'ᚲ': 'k', 'ᚹ': 'w', 'ᛁ': 'i' };
+    for (const [latin, rune] of Object.entries(FUTHARK_MAP)) {
+        if (rune.length === 1 && !(rune in rev)) {
+            rev[rune] = latin;
+        }
+    }
+    return rev;
+})();
+
+export const Futhark = {
+    encode(text, _, retainPunctuation) {
+        const steps = [{
+            title: "Elder Futhark Transliteration",
+            content: "Runes have no letter case; text is transliterated lowercase.\nShared runes: C/K/Q -> ᚲ, V/W -> ᚹ, Y -> ᛁ, X -> ᚲᛊ.\nDigraphs: TH -> ᚦ, NG -> ᛜ.\nScandinavian: Æ -> ᛇ, Ø -> ᚯ, Å -> ᚬ."
+        }];
+        const details = [];
+        const lower = text.toLowerCase();
+        let result = '';
+        let i = 0;
+
+        while (i < lower.length) {
+            const pair = lower.slice(i, i + 2);
+            if (FUTHARK_DIGRAPHS[pair]) {
+                result += FUTHARK_DIGRAPHS[pair];
+                details.push(`'${pair}' -> ${FUTHARK_DIGRAPHS[pair]} (single rune)`);
+                i += 2;
+                continue;
+            }
+            const char = lower[i];
+            if (FUTHARK_MAP[char]) {
+                result += FUTHARK_MAP[char];
+                details.push(`'${char}' -> ${FUTHARK_MAP[char]}`);
+            } else if (char === ' ') {
+                result += ' ';
+                details.push('Space preserved');
+            } else if (retainPunctuation) {
+                result += char;
+                details.push(`Punctuation '${char}' retained`);
+            } else {
+                details.push(`Punctuation '${char}' skipped`);
+            }
+            i++;
+        }
+
+        steps.push({ title: "Character Transliteration", content: details.join('\n') });
+        return { result, steps };
+    },
+
+    decode(text, _, retainPunctuation) {
+        const steps = [{
+            title: "Elder Futhark Transliteration",
+            content: "Runes decode to lowercase Latin letters.\nᚲ -> k, ᚹ -> w, ᛁ -> i (these runes serve several Latin letters).\nᚦ -> th, ᛜ -> ng."
+        }];
+        const details = [];
+        let result = '';
+
+        for (const char of text) {
+            if (FUTHARK_REVERSE[char]) {
+                result += FUTHARK_REVERSE[char];
+                details.push(`${char} -> '${FUTHARK_REVERSE[char]}'`);
+            } else if (char === ' ') {
+                result += ' ';
+                details.push('Space preserved');
+            } else if (retainPunctuation) {
+                result += char;
+                details.push(`Non-rune character '${char}' retained`);
+            } else {
+                details.push(`Non-rune character '${char}' skipped`);
+            }
+        }
+
+        steps.push({ title: "Rune Translation", content: details.join('\n') });
+        return { result, steps };
+    }
+};
+
+/**
+ * 11. THE BASEMENTEN CIPHER
  *
  * Messages are encrypted with AES-256-GCM via WebCrypto, keyed by the vault's
  * random 40-character keyword (hashed with SHA-256 to produce the AES key \u2014

@@ -12,6 +12,7 @@ import {
     A1z26,
     BinaryReverse,
     ScandiCaesar,
+    Futhark,
     Basementen
 } from './ciphers.js';
 
@@ -203,6 +204,13 @@ const CIPHERS = [
                 ? Caesar.encode(input, shift, opts.retainPunctuation)
                 : Caesar.decode(input, shift, opts.retainPunctuation);
         }
+    },
+    {
+        id: 'futhark', name: 'Elder Futhark', shortName: 'Futhark', icon: 'scroll',
+        badge: { text: 'Runes', className: 'badge-scandi' }, paramGroup: 'param-futhark',
+        run: (input, mode, opts) => mode === 'encode'
+            ? Futhark.encode(input, null, opts.retainPunctuation)
+            : Futhark.decode(input, null, opts.retainPunctuation)
     },
     {
         id: 'railfence', name: 'Rail Fence', shortName: 'Rail Fence', icon: 'rows', paramGroup: 'param-railfence',
