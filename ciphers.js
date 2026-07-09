@@ -893,7 +893,106 @@ export const Futhark = {
 };
 
 /**
- * 11. THE BASEMENTEN CIPHER
+ * 11. MORSE CODE
+ * International Morse with Scandinavian extensions. Æ and Ä share ".-.-",
+ * Ø and Ö share "---."; decoding resolves those to Æ and Ø. Letters are
+ * separated by spaces, words by " / ".
+ */
+const MORSE_MAP = {
+    'A': '.-', 'B': '-...', 'C': '-.-.', 'D': '-..', 'E': '.', 'F': '..-.',
+    'G': '--.', 'H': '....', 'I': '..', 'J': '.---', 'K': '-.-', 'L': '.-..',
+    'M': '--', 'N': '-.', 'O': '---', 'P': '.--.', 'Q': '--.-', 'R': '.-.',
+    'S': '...', 'T': '-', 'U': '..-', 'V': '...-', 'W': '.--', 'X': '-..-',
+    'Y': '-.--', 'Z': '--..',
+    'Æ': '.-.-', 'Ø': '---.', 'Å': '.--.-', 'Ä': '.-.-', 'Ö': '---.',
+    '0': '-----', '1': '.----', '2': '..---', '3': '...--', '4': '....-',
+    '5': '.....', '6': '-....', '7': '--...', '8': '---..', '9': '----.',
+    '.': '.-.-.-', ',': '--..--', '?': '..--..', "'": '.----.', '!': '-.-.--',
+    '/': '-..-.', '(': '-.--.', ')': '-.--.-', '&': '.-...', ':': '---...',
+    ';': '-.-.-.', '=': '-...-', '+': '.-.-.', '-': '-....-', '_': '..--.-',
+    '"': '.-..-.', '$': '...-..-', '@': '.--.-.'
+};
+
+// Reverse map for decoding; the first character listed for a code wins,
+// so ".-.-" resolves to Æ (not Ä) and "---." to Ø (not Ö).
+const MORSE_REVERSE = (() => {
+    const rev = {};
+    for (const [char, code] of Object.entries(MORSE_MAP)) {
+        if (!(code in rev)) rev[code] = char;
+    }
+    return rev;
+})();
+
+const MORSE_LETTER_OR_DIGIT = /[A-Z0-9ÆØÅÄÖ]/;
+
+export const Morse = {
+    encode(text, _, retainPunctuation) {
+        const steps = [{
+            title: "Morse Configuration",
+            content: `Letters separated by spaces, words by " / ".\nScandinavian codes: Æ/Ä ".-.-", Ø/Ö "---.", Å ".--.-".\nRetain Punctuation: ${retainPunctuation ? 'Yes (punctuation with Morse codes is encoded)' : 'No (punctuation skipped)'}`
+        }];
+        const details = [];
+        const tokens = [];
+
+        for (const raw of text) {
+            const char = raw.toUpperCase();
+            if (char === ' ' || raw === '\n' || raw === '\t') {
+                if (tokens[tokens.length - 1] !== '/') {
+                    tokens.push('/');
+                    details.push('Word break -> /');
+                }
+            } else if (MORSE_LETTER_OR_DIGIT.test(char) && MORSE_MAP[char]) {
+                tokens.push(MORSE_MAP[char]);
+                details.push(`'${char}' -> ${MORSE_MAP[char]}`);
+            } else if (MORSE_MAP[char]) {
+                if (retainPunctuation) {
+                    tokens.push(MORSE_MAP[char]);
+                    details.push(`Punctuation '${raw}' -> ${MORSE_MAP[char]}`);
+                } else {
+                    details.push(`Punctuation '${raw}' skipped`);
+                }
+            } else {
+                details.push(`No Morse code for '${raw}' - skipped`);
+            }
+        }
+
+        steps.push({ title: "Character Encoding", content: details.join('\n') });
+        return { result: tokens.join(' '), steps };
+    },
+
+    decode(text, _, retainPunctuation) {
+        const steps = [{
+            title: "Morse Configuration",
+            content: 'Expecting letters separated by spaces and words by "/".\nUnrecognized codes decode to "?".'
+        }];
+        const details = [];
+        let result = '';
+
+        const tokens = text.trim().split(/\s+/);
+        if (tokens.length === 1 && tokens[0] === '') {
+            return { result: '', steps: [{ title: "Status", content: "No Morse tokens found." }] };
+        }
+
+        for (const token of tokens) {
+            if (token === '/') {
+                result += ' ';
+                details.push('/ -> word break');
+            } else if (MORSE_REVERSE[token]) {
+                result += MORSE_REVERSE[token];
+                details.push(`${token} -> '${MORSE_REVERSE[token]}'`);
+            } else {
+                result += '?';
+                details.push(`Unrecognized code '${token}' -> '?'`);
+            }
+        }
+
+        steps.push({ title: "Code Translation", content: details.join('\n') });
+        return { result, steps };
+    }
+};
+
+/**
+ * 12. THE BASEMENTEN CIPHER
  *
  * Messages are encrypted with AES-256-GCM via WebCrypto, keyed by the vault's
  * random 40-character keyword (hashed with SHA-256 to produce the AES key \u2014

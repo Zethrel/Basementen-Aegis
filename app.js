@@ -13,6 +13,7 @@ import {
     BinaryReverse,
     ScandiCaesar,
     Futhark,
+    Morse,
     Basementen
 } from './ciphers.js';
 
@@ -211,6 +212,12 @@ const CIPHERS = [
         run: (input, mode, opts) => mode === 'encode'
             ? Futhark.encode(input, null, opts.retainPunctuation)
             : Futhark.decode(input, null, opts.retainPunctuation)
+    },
+    {
+        id: 'morse', name: 'Morse Code', shortName: 'Morse', icon: 'radio', paramGroup: 'param-none',
+        run: (input, mode, opts) => mode === 'encode'
+            ? Morse.encode(input, null, opts.retainPunctuation)
+            : Morse.decode(input, null, opts.retainPunctuation)
     },
     {
         id: 'railfence', name: 'Rail Fence', shortName: 'Rail Fence', icon: 'rows', paramGroup: 'param-railfence',
