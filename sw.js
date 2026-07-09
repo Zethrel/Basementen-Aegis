@@ -9,7 +9,7 @@
  * the new build.
  */
 
-const CACHE_VERSION = 'starlight-v1';
+const CACHE_VERSION = 'starlight-v2';
 
 const PRECACHE_URLS = [
     './',
