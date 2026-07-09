@@ -1308,8 +1308,14 @@ function hexToBuf(hex) {
     return bytes.buffer;
 }
 
-// Derive AES-GCM 256-bit key from password using PBKDF2
-async function deriveKeyFromPassword(password, salt) {
+// KDF version tag recorded alongside every piece of vault data this app writes, so a future
+// KDF change never has to guess what protects an existing entry.
+const CURRENT_KDF = 'argon2id-v1';
+const LEGACY_PBKDF2_ITERATIONS = 600000;
+
+// Legacy KDF, kept only to decrypt vault data written before Argon2id was introduced. Never
+// used to encrypt anything new - see deriveKeyForKdf().
+async function deriveKeyLegacyPBKDF2(password, salt) {
     const baseKey = await window.crypto.subtle.importKey(
         "raw",
         new TextEncoder().encode(password),
@@ -1317,11 +1323,11 @@ async function deriveKeyFromPassword(password, salt) {
         false,
         ["deriveBits", "deriveKey"]
     );
-    const aesKey = await window.crypto.subtle.deriveKey(
+    return window.crypto.subtle.deriveKey(
         {
             name: "PBKDF2",
             salt: salt,
-            iterations: 600000,
+            iterations: LEGACY_PBKDF2_ITERATIONS,
             hash: "SHA-256"
         },
         baseKey,
@@ -1329,7 +1335,34 @@ async function deriveKeyFromPassword(password, salt) {
         false,
         ["encrypt", "decrypt"]
     );
-    return aesKey;
+}
+
+// Derive AES-GCM 256-bit key from password using Argon2id (memory-hard, so GPU/ASIC password
+// cracking is far more expensive than PBKDF2 at an equivalent wall-clock cost). Parameters
+// follow OWASP's baseline recommendation for Argon2id.
+async function deriveKeyArgon2id(password, salt) {
+    const derivedBytes = await window.hashwasm.argon2id({
+        password,
+        salt,
+        iterations: 2,
+        parallelism: 1,
+        memorySize: 19456, // 19 MiB
+        hashLength: 32,
+        outputType: 'binary'
+    });
+    return window.crypto.subtle.importKey(
+        "raw",
+        derivedBytes,
+        { name: "AES-GCM" },
+        false,
+        ["encrypt", "decrypt"]
+    );
+}
+
+// Picks the KDF that protects a given piece of stored vault data based on its recorded
+// version tag. A missing/unrecognized tag means the data predates Argon2id.
+function deriveKeyForKdf(kdf, password, salt) {
+    return kdf === CURRENT_KDF ? deriveKeyArgon2id(password, salt) : deriveKeyLegacyPBKDF2(password, salt);
 }
 
 // Generate secure random key (40 chars from 92-char printable pool for >256 bits entropy)
@@ -1354,7 +1387,7 @@ async function isMasterPassword(pwd) {
         const salt = new Uint8Array(hexToBuf(saltHex));
         const iv = new Uint8Array(hexToBuf(ivHex));
         const ciphertext = hexToBuf(encryptedHex);
-        const aesKey = await deriveKeyFromPassword(pwd, salt);
+        const aesKey = await deriveKeyForKdf(localStorage.getItem('basementen_kdf'), pwd, salt);
         await window.crypto.subtle.decrypt({ name: "AES-GCM", iv }, aesKey, ciphertext);
         return true;
     } catch (e) {
@@ -1377,7 +1410,7 @@ async function searchHistoryByPassword(pwd) {
             const salt = new Uint8Array(hexToBuf(item.salt));
             const iv = new Uint8Array(hexToBuf(item.iv));
             const ciphertext = hexToBuf(item.encryptedPayload);
-            const aesKey = await deriveKeyFromPassword(pwd, salt);
+            const aesKey = await deriveKeyForKdf(item.kdf, pwd, salt);
             const decrypted = await window.crypto.subtle.decrypt(
                 { name: "AES-GCM", iv },
                 aesKey,
@@ -1421,7 +1454,7 @@ async function saveBasementenTransaction(input, output, mode, keyUsed, customNam
         // the transaction password. Nothing sensitive is stored outside this ciphertext.
         const txSalt = window.crypto.getRandomValues(new Uint8Array(16));
         const txIv = window.crypto.getRandomValues(new Uint8Array(12));
-        const txAesKey = await deriveKeyFromPassword(txPwd, txSalt);
+        const txAesKey = await deriveKeyArgon2id(txPwd, txSalt);
 
         const payload = JSON.stringify({ key: keyUsed, input, output });
         const encrypted = await window.crypto.subtle.encrypt(
@@ -1445,7 +1478,8 @@ async function saveBasementenTransaction(input, output, mode, keyUsed, customNam
             mode: mode,
             encryptedPayload: bufToHex(encrypted),
             salt: bufToHex(txSalt),
-            iv: bufToHex(txIv)
+            iv: bufToHex(txIv),
+            kdf: CURRENT_KDF
         };
 
         history.unshift(newItem);
@@ -1548,7 +1582,7 @@ function promptRevealKey(item, tdKey) {
             const iv = new Uint8Array(hexToBuf(item.iv));
             const ciphertext = hexToBuf(item.encryptedPayload);
 
-            const aesKey = await deriveKeyFromPassword(pwd, salt);
+            const aesKey = await deriveKeyForKdf(item.kdf, pwd, salt);
             const decrypted = await window.crypto.subtle.decrypt(
                 { name: "AES-GCM", iv: iv },
                 aesKey,
@@ -1585,7 +1619,7 @@ function promptRevealPlaintext(item, cell, field) {
             const iv = new Uint8Array(hexToBuf(item.iv));
             const ciphertext = hexToBuf(item.encryptedPayload);
 
-            const aesKey = await deriveKeyFromPassword(pwd, salt);
+            const aesKey = await deriveKeyForKdf(item.kdf, pwd, salt);
             const decrypted = await window.crypto.subtle.decrypt(
                 { name: "AES-GCM", iv: iv },
                 aesKey,
@@ -1684,6 +1718,7 @@ function wipeBasementenWorkspace(confirmMessage) {
     localStorage.removeItem('basementen_encrypted_key');
     localStorage.removeItem('basementen_salt');
     localStorage.removeItem('basementen_iv');
+    localStorage.removeItem('basementen_kdf');
     localStorage.removeItem('basementen_history');
     lockBasementen();
 
@@ -1750,7 +1785,7 @@ function showBasementenSetup() {
         try {
             // Generate a secure salt & AES key
             const salt = window.crypto.getRandomValues(new Uint8Array(16));
-            const aesKey = await deriveKeyFromPassword(password, salt);
+            const aesKey = await deriveKeyArgon2id(password, salt);
 
             // Generate initial random key
             const newKey = generate256BitKey();
@@ -1767,6 +1802,7 @@ function showBasementenSetup() {
             localStorage.setItem('basementen_salt', bufToHex(salt));
             localStorage.setItem('basementen_iv', bufToHex(iv));
             localStorage.setItem('basementen_encrypted_key', bufToHex(encrypted));
+            localStorage.setItem('basementen_kdf', CURRENT_KDF);
 
             // Set session state
             basementenUnlocked = true;
@@ -1836,9 +1872,10 @@ function showBasementenUnlock(previousCipher) {
             const salt = new Uint8Array(hexToBuf(saltHex));
             const iv = new Uint8Array(hexToBuf(ivHex));
             const ciphertext = hexToBuf(encryptedHex);
+            const storedKdf = localStorage.getItem('basementen_kdf');
 
-            // Derive key
-            const aesKey = await deriveKeyFromPassword(password, salt);
+            // Derive key using whichever KDF protects this vault today
+            const aesKey = await deriveKeyForKdf(storedKdf, password, salt);
 
             // Try to decrypt
             const decrypted = await window.crypto.subtle.decrypt(
@@ -1860,11 +1897,41 @@ function showBasementenUnlock(previousCipher) {
             saveConfigState();
             setupUIFromState();
             runConversion();
+
+            // Vaults created before Argon2id was introduced get silently upgraded on the next
+            // successful unlock, so existing users benefit without a forced password reset.
+            if (storedKdf !== CURRENT_KDF) {
+                upgradeMasterKeyToArgon2id(password, basementenKey);
+            }
         } catch (err) {
             console.error(err);
             elements.basementenUnlockError.textContent = "Incorrect password. Please try again.";
         }
     };
+}
+
+// Re-encrypts the already-unlocked master key under Argon2id with a fresh salt/IV, then
+// updates storage in place. Best-effort: if it fails, the vault stays on the legacy KDF and
+// simply gets offered the upgrade again next time - the unlock itself already succeeded.
+async function upgradeMasterKeyToArgon2id(password, plainKey) {
+    try {
+        const newSalt = window.crypto.getRandomValues(new Uint8Array(16));
+        const newIv = window.crypto.getRandomValues(new Uint8Array(12));
+        const newAesKey = await deriveKeyArgon2id(password, newSalt);
+        const encrypted = await window.crypto.subtle.encrypt(
+            { name: "AES-GCM", iv: newIv },
+            newAesKey,
+            new TextEncoder().encode(plainKey)
+        );
+
+        localStorage.setItem('basementen_salt', bufToHex(newSalt));
+        localStorage.setItem('basementen_iv', bufToHex(newIv));
+        localStorage.setItem('basementen_encrypted_key', bufToHex(encrypted));
+        localStorage.setItem('basementen_kdf', CURRENT_KDF);
+        basementenCryptoKey = newAesKey; // keep the in-memory key consistent with what's now on disk
+    } catch (err) {
+        console.warn("Argon2id upgrade failed; vault remains on the legacy KDF for now", err);
+    }
 }
 
 // Start the app

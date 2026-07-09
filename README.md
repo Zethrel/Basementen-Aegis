@@ -8,7 +8,7 @@ Created by Zethrel — Argent Dawn EU, for the Starlight guild.
 
 Caesar · ROT13 · Atbash · Vigenère · Rail Fence · Binary Converter · A1Z26 · Binary Reverse (custom) · Scandi Caesar (Danish/Norwegian/Swedish alphabets) · Anagram Helper
 
-Plus **The Basementen** — a password-protected vault cipher, with transactions encrypted at rest using AES-256-GCM (key derived via PBKDF2).
+Plus **The Basementen** — a password-protected vault cipher, with transactions encrypted at rest using AES-256-GCM (key derived via Argon2id).
 
 ## Features
 
@@ -40,7 +40,7 @@ Every cipher operation runs entirely client-side. The desktop app's bundled serv
 ## Testing
 
 ```bash
-npm install       # fetches the Playwright test driver only, no other dependencies
+npm install       # dev-only: the Playwright test driver + the tool used to vendor argon2.min.js
 npm test          # unit tests (ciphers.js) + browser-driven security tests (the vault)
 npm run test:unit
 npm run test:security
@@ -48,5 +48,14 @@ npm run test:security
 
 The security suite drives a real browser against the vault ("The Basementen") to check
 things like: the master key is encrypted at rest, wrong passwords and tampered storage
-fail closed, the vault auto-locks on idle/tab-hidden, and user-supplied transaction data
-can't inject markup into the history views.
+fail closed, the vault auto-locks on idle/tab-hidden, user-supplied transaction data can't
+inject markup into the history views, and vaults created before Argon2id was introduced
+still unlock and get silently upgraded.
+
+## Vendored dependencies
+
+`lucide.min.js`, `qrcode.js`, and `argon2.min.js` are committed straight into the repo so the
+app stays a dependency-free static page with nothing fetched at runtime. `argon2.min.js` is
+`node_modules/hash-wasm/dist/argon2.umd.min.js` (its WASM binary is inlined as base64, so no
+extra `.wasm` file to ship) - to update it: bump the `hash-wasm` devDependency, `npm install`,
+then re-copy that file over `argon2.min.js` and bump the `?v=` query string in `index.html`.

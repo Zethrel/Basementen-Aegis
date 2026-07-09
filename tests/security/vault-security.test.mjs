@@ -53,7 +53,7 @@ async function setupVault(masterPassword = MASTER_PASSWORD) {
     await page.clock.runFor(11000); // the setup form has a mandatory 10s "read this" countdown
     await page.waitForTimeout(300);
     await page.click('#basementen-setup-submit');
-    await page.waitForTimeout(300); // real time: PBKDF2 (600k iterations) is genuine work, not virtualized
+    await page.waitForTimeout(300); // real time: Argon2id is genuine memory-hard work, not virtualized
 }
 
 function keyStatus() {
@@ -210,10 +210,88 @@ test('user-supplied transaction data cannot inject markup into the history/log v
     assert.equal(injectedElementExists, false, 'the payload must be rendered as inert text, not parsed as an element');
 });
 
-test('PBKDF2 iteration count has not regressed below the OWASP-recommended floor', async () => {
+test('KDF parameters have not regressed below their documented floors', async () => {
     const source = await readFile(path.join(REPO_ROOT, 'app.js'), 'utf8');
-    const match = source.match(/name:\s*"PBKDF2"[\s\S]{0,120}?iterations:\s*(\d+)/);
-    assert.ok(match, 'could not locate the PBKDF2 iteration count in app.js');
-    const iterations = Number(match[1]);
-    assert.ok(iterations >= 600_000, `PBKDF2 iterations dropped to ${iterations}, below the 600,000 floor`);
+
+    const argon2Match = source.match(/memorySize:\s*(\d+)[\s\S]{0,80}?hashLength:\s*(\d+)/);
+    assert.ok(argon2Match, 'could not locate Argon2id parameters in app.js');
+    assert.ok(Number(argon2Match[1]) >= 19456, `Argon2id memorySize dropped below the 19 MiB floor: ${argon2Match[1]}`);
+    assert.ok(Number(argon2Match[2]) >= 32, `Argon2id hashLength dropped below 32 bytes: ${argon2Match[2]}`);
+
+    // The legacy PBKDF2 path is dead for new encryption, but still used to decrypt old vaults
+    // during migration, so it must keep meeting the floor it always did.
+    const legacyMatch = source.match(/LEGACY_PBKDF2_ITERATIONS\s*=\s*(\d+)/);
+    assert.ok(legacyMatch, 'could not locate the legacy PBKDF2 iteration count in app.js');
+    assert.ok(Number(legacyMatch[1]) >= 600_000, `legacy PBKDF2 iterations dropped below 600,000: ${legacyMatch[1]}`);
+});
+
+test('new vaults and new transactions are tagged with the current Argon2id KDF version', async () => {
+    await setupVault();
+    assert.equal(await page.evaluate(() => localStorage.getItem('basementen_kdf')), 'argon2id-v1');
+
+    await page.fill('#basementen-tx-password', 'AnotherStrongTxPass1!');
+    await page.fill('#text-input', 'tagged transaction content');
+    await page.waitForTimeout(300);
+    await page.fill('#basementen-tx-name', 'kdf-tag-check');
+    await page.click('#basementen-save-tx');
+    await page.waitForTimeout(300);
+
+    const items = await page.evaluate(() => JSON.parse(localStorage.getItem('basementen_history') || '[]'));
+    assert.equal(items.length, 1);
+    assert.equal(items[0].kdf, 'argon2id-v1');
+});
+
+test('a legacy PBKDF2 vault unlocks and is silently upgraded to Argon2id', async () => {
+    // Craft vault data exactly as the pre-Argon2id app would have written it, so this pins
+    // down real backward compatibility rather than a mocked version tag.
+    const legacyKeyPlain = 'LEGACY-GENERATED-KEY-1234567890ABCDEFGH';
+    const before = await page.evaluate(async ({ password, plainKey }) => {
+        const salt = crypto.getRandomValues(new Uint8Array(16));
+        const iv = crypto.getRandomValues(new Uint8Array(12));
+        const baseKey = await crypto.subtle.importKey('raw', new TextEncoder().encode(password), 'PBKDF2', false, ['deriveKey']);
+        const aesKey = await crypto.subtle.deriveKey(
+            { name: 'PBKDF2', salt, iterations: 600000, hash: 'SHA-256' },
+            baseKey, { name: 'AES-GCM', length: 256 }, false, ['encrypt']
+        );
+        const encrypted = await crypto.subtle.encrypt({ name: 'AES-GCM', iv }, aesKey, new TextEncoder().encode(plainKey));
+        const toHex = (buf) => Array.from(new Uint8Array(buf)).map((b) => b.toString(16).padStart(2, '0')).join('');
+        const saltHex = toHex(salt);
+        localStorage.setItem('basementen_salt', saltHex);
+        localStorage.setItem('basementen_iv', toHex(iv));
+        localStorage.setItem('basementen_encrypted_key', toHex(encrypted));
+        // Deliberately no basementen_kdf key - matching every install that predates it.
+        return { saltHex };
+    }, { password: MASTER_PASSWORD, plainKey: legacyKeyPlain });
+
+    assert.equal(await page.evaluate(() => localStorage.getItem('basementen_kdf')), null);
+
+    await openBasementen();
+    await page.waitForSelector('#basementen-unlock-modal:not(.hidden)', { timeout: 3000 });
+    await page.fill('#basementen-unlock-pwd-input', MASTER_PASSWORD);
+    await page.click('#basementen-unlock-submit');
+    await page.waitForTimeout(400);
+
+    assert.match(await keyStatus(), /Active/, 'the legacy vault must still unlock with its original password');
+
+    const after = await page.evaluate(() => ({
+        kdf: localStorage.getItem('basementen_kdf'),
+        salt: localStorage.getItem('basementen_salt'),
+    }));
+    assert.equal(after.kdf, 'argon2id-v1', 'a successful unlock must upgrade the KDF version tag');
+    assert.notEqual(after.salt, before.saltHex, 'the upgrade must re-encrypt under a fresh salt, not reuse the legacy one');
+
+    // Lock and re-unlock to prove the upgraded (Argon2id) ciphertext round-trips correctly.
+    await page.evaluate(() => {
+        Object.defineProperty(document, 'hidden', { value: true, configurable: true });
+        document.dispatchEvent(new Event('visibilitychange'));
+    });
+    await page.waitForTimeout(200);
+    assert.match(await keyStatus(), /Locked/);
+
+    await openBasementen();
+    await page.waitForSelector('#basementen-unlock-modal:not(.hidden)', { timeout: 3000 });
+    await page.fill('#basementen-unlock-pwd-input', MASTER_PASSWORD);
+    await page.click('#basementen-unlock-submit');
+    await page.waitForTimeout(400);
+    assert.match(await keyStatus(), /Active/, 'the upgraded vault must unlock correctly on the very next attempt');
 });

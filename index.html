@@ -25,6 +25,10 @@
 
     <!-- QR code generation (vendored locally, generated client-side, no external API call) -->
     <script src="qrcode.js?v=2.0.4"></script>
+
+    <!-- Argon2id (vendored locally; WASM binary is inlined, no network fetch). Used to derive
+         the vault's AES-256-GCM key from a password - see hash-wasm on npm. -->
+    <script src="argon2.min.js?v=4.12.0"></script>
 </head>
 <body>
     <div class="app-container">
