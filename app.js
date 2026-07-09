@@ -174,6 +174,15 @@ function init() {
 
     // Register service worker for true offline support
     registerServiceWorker();
+
+    // On mobile the cipher picker is a horizontal pill row; make sure the
+    // saved active cipher isn't hidden off-screen when the app opens.
+    if (window.matchMedia('(max-width: 768px)').matches) {
+        const activeBtn = document.querySelector('.cipher-select-btn.active');
+        if (activeBtn) {
+            activeBtn.scrollIntoView({ block: 'nearest', inline: 'center' });
+        }
+    }
 }
 
 /**

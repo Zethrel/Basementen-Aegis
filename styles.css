@@ -1087,16 +1087,41 @@ textarea {
         padding-bottom: 1rem;
     }
     
+    /* On small screens the cipher list becomes a horizontally scrollable
+       pill row instead of a tall wrapped grid, keeping the workspace high
+       up on the page while preserving one-tap switching, icons and badges. */
     .cipher-nav {
         flex-direction: row;
-        flex-wrap: wrap;
-        gap: 6px;
+        flex-wrap: nowrap;
+        gap: 8px;
+        overflow-x: auto;
+        padding-bottom: 8px;
+        -webkit-overflow-scrolling: touch;
+        scrollbar-width: thin;
+        scroll-snap-type: x proximity;
     }
-    
+
+    .cipher-nav::-webkit-scrollbar {
+        height: 4px;
+    }
+
+    .cipher-nav::-webkit-scrollbar-thumb {
+        background: rgba(255, 255, 255, 0.15);
+        border-radius: 4px;
+    }
+
     .cipher-select-btn {
-        flex: 1 1 calc(50% - 6px);
-        padding: 10px 14px;
-        font-size: 0.875rem;
+        flex: 0 0 auto;
+        padding: 8px 16px;
+        font-size: 0.85rem;
+        border-radius: 999px;
+        border-color: var(--border-glass);
+        white-space: nowrap;
+        scroll-snap-align: start;
+    }
+
+    .cipher-select-btn .badge-custom {
+        margin-left: 8px;
     }
     
     .control-panel {
