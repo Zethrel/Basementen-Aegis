@@ -18,6 +18,26 @@ import {
 // Global PWA Install prompt pointer
 let deferredPrompt = null;
 
+/* --------------------------------------------------------------------------
+   Last-resort error net. Local try/catch covers the conversion dispatch and
+   every vault flow; this catches anything that escapes (event handlers,
+   future bugs) so a fault surfaces as a toast instead of a silent dead UI.
+   Toasts are throttled; the console always gets the full error.
+   -------------------------------------------------------------------------- */
+let lastGlobalErrorToast = 0;
+
+function reportUnexpectedError(detail) {
+    console.error('Unexpected error:', detail);
+    const now = Date.now();
+    if (now - lastGlobalErrorToast < 5000) return;
+    lastGlobalErrorToast = now;
+    const message = (detail && detail.message) || String(detail);
+    showToast(`Unexpected error: ${message}`, 'error', 6000);
+}
+
+window.addEventListener('error', (e) => reportUnexpectedError(e.error || e.message));
+window.addEventListener('unhandledrejection', (e) => reportUnexpectedError(e.reason));
+
 /**
  * Initialize Application
  */
@@ -688,6 +708,10 @@ export async function runConversion() {
             resultObj = await entry.run(input, state.mode, { retainPunctuation: state.retainPunctuation });
         }
     } catch (e) {
+        // Surface the failure in the output itself (never leave a stale
+        // result that mismatches the current input) and keep the stack
+        // reachable even when the process panel is hidden.
+        console.error('Cipher execution failed:', e);
         resultObj = { result: `Error executing conversion: ${e.message}`, steps: [{ title: 'Execution Failure', content: e.stack }] };
     }
 

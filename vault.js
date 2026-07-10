@@ -864,20 +864,27 @@ export function bindVaultEvents() {
         });
         if (!ok) return;
 
-        const newKey = generate256BitKey();
-        const iv = window.crypto.getRandomValues(new Uint8Array(12));
-        const encrypted = await window.crypto.subtle.encrypt(
-            { name: "AES-GCM", iv: iv },
-            vaultSession.cryptoKey,
-            new TextEncoder().encode(newKey)
-        );
-        localStorage.setItem('basementen_iv', bufToHex(iv));
-        localStorage.setItem('basementen_encrypted_key', bufToHex(encrypted));
-        vaultSession.key = newKey;
-        elements.basementenKeyStatus.textContent = 'Active [Secure 256-bit]';
-        elements.basementenKeyStatus.classList.remove('locked');
-        showToast('New 256-bit key generated and encrypted.', 'success');
-        runConversion();
+        try {
+            const newKey = generate256BitKey();
+            const iv = window.crypto.getRandomValues(new Uint8Array(12));
+            // Encrypt fully before any storage write, so a failure here
+            // leaves the previous key blob untouched and still valid.
+            const encrypted = await window.crypto.subtle.encrypt(
+                { name: "AES-GCM", iv: iv },
+                vaultSession.cryptoKey,
+                new TextEncoder().encode(newKey)
+            );
+            localStorage.setItem('basementen_iv', bufToHex(iv));
+            localStorage.setItem('basementen_encrypted_key', bufToHex(encrypted));
+            vaultSession.key = newKey;
+            elements.basementenKeyStatus.textContent = 'Active [Secure 256-bit]';
+            elements.basementenKeyStatus.classList.remove('locked');
+            showToast('New 256-bit key generated and encrypted.', 'success');
+            runConversion();
+        } catch (err) {
+            console.error('Key generation failed:', err);
+            showToast('Key generation failed — the previous key is still active.', 'error', 6000);
+        }
     });
 
     elements.basementenViewLog.addEventListener('click', () => {
