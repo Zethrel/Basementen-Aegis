@@ -12,7 +12,13 @@ import { elements } from './dom.js';
    dismiss, a Tab focus trap, and focus restored to the triggering element.
    ========================================================================== */
 
-// overlay element -> dismiss function (what Escape / overlay click should do)
+// overlay element -> dismiss function (what Escape / overlay click should do).
+// This is a STATIC registry: each of the app's modals registers exactly once
+// at startup, and entries deliberately survive open/close cycles (opening and
+// closing only toggles the 'hidden' class). Its size is the fixed number of
+// modals, so lookups are constant-time — do NOT "clean up" entries on close,
+// or Escape/overlay dismissal would break the next time that modal opens.
+// Insertion order doubles as stacking priority for topVisibleModal().
 const modalRegistry = new Map();
 
 // Focus to restore when each open modal closes (stack: log modal can open
