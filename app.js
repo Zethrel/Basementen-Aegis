@@ -431,6 +431,7 @@ function bindEvents() {
 
     // TextArea Events (typing is coalesced; the character counter stays live)
     elements.textInput.addEventListener('input', () => {
+        enforceInputLimits();
         elements.inputStats.textContent = `${elements.textInput.value.length} characters`;
         if (state.cipher === 'anagram') {
             scrambleInputToOutput();
@@ -456,7 +457,8 @@ function bindEvents() {
         try {
             const text = await navigator.clipboard.readText();
             elements.textInput.value = text;
-            elements.inputStats.textContent = `${text.length} characters`;
+            enforceInputLimits();
+            elements.inputStats.textContent = `${elements.textInput.value.length} characters`;
             runConversion();
             triggerHistoryAutoSave();
         } catch (err) {
@@ -587,6 +589,41 @@ function updateNetworkStatus() {
 // Monotonic run id: async ciphers (The Basementen) can resolve out of order
 // under fast typing, so stale results must never overwrite newer ones.
 let conversionRunId = 0;
+
+/* --------------------------------------------------------------------------
+   Input size guardrails. The process panel renders one step line per
+   character, so unbounded pastes mean multi-megabyte DOM text and a frozen
+   tab. Past the soft limit we warn once; past the hard limit we truncate.
+   Vault/password fields are separate inputs and are never limited.
+   -------------------------------------------------------------------------- */
+const INPUT_SOFT_LIMIT = 10000;
+const INPUT_HARD_LIMIT = 50000;
+let softLimitWarned = false;
+let hardLimitWarned = false;
+
+function enforceInputLimits() {
+    let len = elements.textInput.value.length;
+
+    if (len > INPUT_HARD_LIMIT) {
+        elements.textInput.value = elements.textInput.value.slice(0, INPUT_HARD_LIMIT);
+        len = INPUT_HARD_LIMIT;
+        if (!hardLimitWarned) {
+            hardLimitWarned = true;
+            showToast(`Input truncated: the maximum is ${INPUT_HARD_LIMIT.toLocaleString()} characters.`, 'error', 5000);
+        }
+    } else if (len < INPUT_HARD_LIMIT) {
+        hardLimitWarned = false; // re-arm once back under the cap
+    }
+
+    if (len > INPUT_SOFT_LIMIT) {
+        if (!softLimitWarned) {
+            softLimitWarned = true;
+            showToast(`Large input (over ${INPUT_SOFT_LIMIT.toLocaleString()} characters) — processing may be slow on this device.`, 'warning', 5000);
+        }
+    } else {
+        softLimitWarned = false; // re-arm once back under the threshold
+    }
+}
 
 // Trailing debounce for high-frequency sources (typing, slider drags):
 // coalesces bursts of input events into one conversion. One-shot actions
