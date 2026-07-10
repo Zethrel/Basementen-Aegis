@@ -32,6 +32,7 @@ export function lockBasementenSession() {
     autoSaveDraftId = null;
     autoSaveDraftContent = null;
     masterCheckCache = { pwd: null, isMaster: false };
+    txKeyCache = new Map();
     elements.basementenKeyStatus.textContent = 'Locked [Requires Verification]';
     elements.basementenKeyStatus.classList.add('locked');
 }
@@ -134,6 +135,46 @@ function masterBlobKdf() {
     return localStorage.getItem(KDF_STORAGE_KEY) || 'pbkdf2';
 }
 
+/* --------------------------------------------------------------------------
+   Transaction-key derivation.
+
+   All new log entries share one per-vault salt (basementen_tx_salt), so a
+   typed password costs exactly ONE Argon2id derivation no matter how many
+   entries the log holds — testing the derived key against each entry is a
+   microsecond AES-GCM decrypt. Entries from before this change keep their
+   own per-entry salts and simply cost one derivation each, deduplicated
+   through the same cache below.
+   -------------------------------------------------------------------------- */
+
+const TX_SALT_STORAGE_KEY = 'basementen_tx_salt';
+
+// How many entries the vault log holds. At the cap, explicit saves must be
+// confirmed (the oldest entry and its key are permanently lost) and
+// auto-save drafts pause instead of silently evicting anything.
+const TX_LOG_CAP = 50;
+
+function getOrCreateTxSalt() {
+    let saltHex = localStorage.getItem(TX_SALT_STORAGE_KEY);
+    if (!saltHex) {
+        saltHex = bufToHex(window.crypto.getRandomValues(new Uint8Array(16)));
+        localStorage.setItem(TX_SALT_STORAGE_KEY, saltHex);
+    }
+    return saltHex;
+}
+
+// Session cache of derived transaction keys (CryptoKey objects, never raw
+// bytes), so re-searching or saving with an already-derived password is
+// instant. Cleared whenever the vault locks.
+let txKeyCache = new Map();
+
+async function deriveTxKey(pwd, saltHex, kdf) {
+    const cacheKey = `${kdf}|${saltHex}|${pwd}`;
+    if (txKeyCache.has(cacheKey)) return txKeyCache.get(cacheKey);
+    const key = await deriveKeyFromPassword(pwd, new Uint8Array(hexToBuf(saltHex)), kdf);
+    txKeyCache.set(cacheKey, key);
+    return key;
+}
+
 // Generate secure random key (40 chars from 92-char printable pool for >256 bits entropy)
 function generate256BitKey() {
     const pool = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789!@#$%^&*()_+-=[]{}|;:,.<>?\u00e6\u00f8\u00e5\u00c6\u00d8\u00c5";
@@ -185,10 +226,11 @@ async function searchHistoryByPassword(pwd) {
     
     for (const item of history) {
         try {
-            const salt = new Uint8Array(hexToBuf(item.salt));
             const iv = new Uint8Array(hexToBuf(item.iv));
             const ciphertext = hexToBuf(item.encryptedPayload);
-            const aesKey = await deriveKeyFromPassword(pwd, salt, item.kdf || 'pbkdf2');
+            // Entries sharing the vault salt hit the cache after the first
+            // derivation, so this loop costs one Argon2id run, not one per entry.
+            const aesKey = await deriveTxKey(pwd, item.salt, item.kdf || 'pbkdf2');
             const decrypted = await window.crypto.subtle.decrypt(
                 { name: "AES-GCM", iv },
                 aesKey,
@@ -248,14 +290,48 @@ export async function saveBasementenTransaction(input, output, mode, keyUsed, cu
         return false;
     }
 
+    let history = [];
+    const saved = localStorage.getItem('basementen_history');
+    if (saved) {
+        try {
+            history = JSON.parse(saved);
+        } catch(e) {}
+    }
+
+    // At the cap, adding a new entry means permanently losing the oldest one
+    // (and its key — any ciphertext encrypted with it becomes undecryptable).
+    // Never do that silently: drafts pause, explicit saves must be confirmed.
+    // Replacing this session's own draft doesn't grow the log, so it's exempt.
+    const replacingDraft = history.length > 0 && history[0].id === autoSaveDraftId;
+    if (!replacingDraft && history.length >= TX_LOG_CAP) {
+        if (isAutoSave) {
+            elements.basementenTxError.textContent = `Vault log is full (${TX_LOG_CAP} entries) — auto-save paused. Save explicitly or clear old entries.`;
+            elements.basementenTxError.style.color = '#f59e0b';
+            return false;
+        }
+        const oldest = history[history.length - 1];
+        const ok = await showConfirm({
+            title: 'Vault Log Full',
+            message: `The log holds its maximum of ${TX_LOG_CAP} entries. Saving this transaction permanently deletes the oldest entry ("${oldest.name || 'Unnamed Transaction'}") and its key — any ciphertext encrypted with that key becomes undecryptable.`,
+            confirmLabel: 'Delete Oldest & Save',
+            danger: true
+        });
+        if (!ok) {
+            elements.basementenTxError.textContent = "Transaction not saved: vault log is full.";
+            elements.basementenTxError.style.color = '#f59e0b';
+            return false;
+        }
+    }
+
     try {
         elements.basementenTxError.textContent = "";
 
-        // Encrypt the entire transaction payload (keyword + plaintext input/output) using
-        // the transaction password. Nothing sensitive is stored outside this ciphertext.
-        const txSalt = window.crypto.getRandomValues(new Uint8Array(16));
+        // Encrypt the entire transaction payload (keyword + plaintext input/output)
+        // using the transaction password and the shared per-vault salt. Nothing
+        // sensitive is stored outside this ciphertext.
+        const txSaltHex = getOrCreateTxSalt();
         const txIv = window.crypto.getRandomValues(new Uint8Array(12));
-        const txAesKey = await deriveKeyFromPassword(txPwd, txSalt);
+        const txAesKey = await deriveTxKey(txPwd, txSaltHex, 'argon2id');
 
         const payload = JSON.stringify({ key: keyUsed, input, output });
         const encrypted = await window.crypto.subtle.encrypt(
@@ -264,14 +340,6 @@ export async function saveBasementenTransaction(input, output, mode, keyUsed, cu
             new TextEncoder().encode(payload)
         );
 
-        let history = [];
-        const saved = localStorage.getItem('basementen_history');
-        if (saved) {
-            try {
-                history = JSON.parse(saved);
-            } catch(e) {}
-        }
-
         const newItem = {
             id: crypto.randomUUID(),
             timestamp: new Date().toISOString(),
@@ -279,17 +347,17 @@ export async function saveBasementenTransaction(input, output, mode, keyUsed, cu
             mode: mode,
             kdf: 'argon2id',
             encryptedPayload: bufToHex(encrypted),
-            salt: bufToHex(txSalt),
+            salt: txSaltHex,
             iv: bufToHex(txIv)
         };
 
-        if (history.length > 0 && history[0].id === autoSaveDraftId) {
+        if (replacingDraft) {
             // Same composition session: overwrite the previous draft entry.
             // This also lets an explicit save absorb its own auto-saved draft.
             history[0] = newItem;
         } else {
             history.unshift(newItem);
-            if (history.length > 20) {
+            if (history.length > TX_LOG_CAP) {
                 history.pop();
             }
         }
@@ -386,11 +454,10 @@ function promptRevealKey(item, tdKey) {
         e.preventDefault();
         const pwd = elements.basementenRevealKeyPwdInput.value;
         try {
-            const salt = new Uint8Array(hexToBuf(item.salt));
             const iv = new Uint8Array(hexToBuf(item.iv));
             const ciphertext = hexToBuf(item.encryptedPayload);
 
-            const aesKey = await deriveKeyFromPassword(pwd, salt, item.kdf || 'pbkdf2');
+            const aesKey = await deriveTxKey(pwd, item.salt, item.kdf || 'pbkdf2');
             const decrypted = await window.crypto.subtle.decrypt(
                 { name: "AES-GCM", iv: iv },
                 aesKey,
@@ -423,11 +490,10 @@ function promptRevealPlaintext(item, cell, field) {
         e.preventDefault();
         const pwd = elements.basementenRevealKeyPwdInput.value;
         try {
-            const salt = new Uint8Array(hexToBuf(item.salt));
             const iv = new Uint8Array(hexToBuf(item.iv));
             const ciphertext = hexToBuf(item.encryptedPayload);
 
-            const aesKey = await deriveKeyFromPassword(pwd, salt, item.kdf || 'pbkdf2');
+            const aesKey = await deriveTxKey(pwd, item.salt, item.kdf || 'pbkdf2');
             const decrypted = await window.crypto.subtle.decrypt(
                 { name: "AES-GCM", iv: iv },
                 aesKey,
@@ -536,6 +602,7 @@ async function wipeBasementenWorkspace(confirmMessage) {
     localStorage.removeItem('basementen_iv');
     localStorage.removeItem('basementen_history');
     localStorage.removeItem(KDF_STORAGE_KEY);
+    localStorage.removeItem(TX_SALT_STORAGE_KEY);
     lockBasementenSession();
 
     state.cipher = 'caesar';
