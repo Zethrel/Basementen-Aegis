@@ -110,6 +110,23 @@ body::before {
     background: var(--color-primary);
 }
 
+/* Firefox scrollbars (::-webkit-scrollbar rules don't apply there) */
+:root, textarea, .process-content, .log-table-wrap {
+    scrollbar-width: thin;
+    scrollbar-color: var(--border-glass-hover) var(--bg-app);
+}
+
+/* The cipher pill row scrolls horizontally on mobile; hide its scrollbar
+   visually (scrolling still works) for a cleaner strip on all engines. */
+.cipher-nav {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+}
+
+.cipher-nav::-webkit-scrollbar {
+    display: none;
+}
+
 /* Glassmorphism card utility */
 .glass {
     background: var(--bg-surface-glass);
@@ -674,6 +691,9 @@ textarea {
     line-height: 1.6;
     outline: none;
     min-height: 180px;
+    /* Long outputs scroll inside the panel instead of growing the page */
+    max-height: 400px;
+    overflow-y: auto;
 }
 
 .panel-footer {
