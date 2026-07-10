@@ -5,7 +5,7 @@
  * panel, and all cipher-agnostic event handlers.
  */
 
-import { CAESAR_ALPHABETS } from './ciphers.js';
+import { CAESAR_ALPHABETS, setFullStepDetail } from './ciphers.js';
 import { elements } from './dom.js';
 import { state, loadSavedState, saveConfigState } from './state.js';
 import { getCipher, renderCipherNav } from './registry.js';
@@ -243,6 +243,8 @@ export function setupUIFromState() {
     // Set Toggles
     elements.optPunctuation.checked = state.retainPunctuation;
     elements.optProcess.checked = state.showProcess;
+    elements.optFullSteps.checked = state.fullSteps;
+    setFullStepDetail(state.fullSteps);
     
     if (state.showProcess) {
         elements.processSection.classList.remove('hidden');
@@ -363,6 +365,14 @@ function bindEvents() {
         } else {
             elements.processSection.classList.add('hidden');
         }
+        saveConfigState();
+        runConversion();
+    });
+
+    // Full step detail: opt out of per-character step summarization
+    elements.optFullSteps.addEventListener('change', (e) => {
+        state.fullSteps = e.target.checked;
+        setFullStepDetail(state.fullSteps);
         saveConfigState();
         runConversion();
     });

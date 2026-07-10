@@ -9,7 +9,8 @@ export const state = {
     cipher: 'caesar',
     mode: 'encode',
     retainPunctuation: true,
-    showProcess: true
+    showProcess: true,
+    fullSteps: false
 };
 
 /**
@@ -50,6 +51,7 @@ export function loadSavedState() {
             state.mode = parsed.mode || 'encode';
             state.retainPunctuation = parsed.retainPunctuation !== undefined ? parsed.retainPunctuation : true;
             state.showProcess = parsed.showProcess !== undefined ? parsed.showProcess : true;
+            state.fullSteps = parsed.fullSteps !== undefined ? parsed.fullSteps : false;
         } catch (e) {
             console.error("Error reading saved state", e);
         }
@@ -73,7 +75,8 @@ export function saveConfigState() {
         cipher: state.cipher,
         mode: state.mode,
         retainPunctuation: state.retainPunctuation,
-        showProcess: state.showProcess
+        showProcess: state.showProcess,
+        fullSteps: state.fullSteps
     };
     localStorage.setItem('aegis_state', JSON.stringify(config));
 }

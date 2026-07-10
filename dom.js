@@ -14,6 +14,7 @@ export const elements = {
     // Option Toggles
     optPunctuation: document.getElementById('option-punctuation'),
     optProcess: document.getElementById('option-process'),
+    optFullSteps: document.getElementById('option-full-steps'),
     processSection: document.getElementById('process-section'),
     // Inputs & Parameters (param-group panels are looked up by id via the registry)
     caesarShift: document.getElementById('caesar-shift'),

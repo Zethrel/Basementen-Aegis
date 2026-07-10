@@ -10,6 +10,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 
 import {
+    setFullStepDetail,
     Caesar,
     Rot13,
     Atbash,
@@ -33,6 +34,27 @@ function assertShape(obj) {
         assert.equal(typeof step.content, 'string');
     }
 }
+
+test('Step summarization: long inputs collapse to edges + omission marker', () => {
+    const long = 'a'.repeat(150);
+    const steps = Caesar.encode(long, 3, 'en', true).steps;
+    const lines = steps[1].content.split('\n');
+    assert.equal(lines.length, 21); // 10 + marker + 10
+    assert.ok(lines[10].includes('130 steps omitted (150 total'));
+
+    // Short inputs keep full detail
+    const short = Caesar.encode('a'.repeat(60), 3, 'en', true).steps;
+    assert.equal(short[1].content.split('\n').length, 60);
+
+    // The full-detail flag restores every line
+    setFullStepDetail(true);
+    try {
+        const full = Caesar.encode(long, 3, 'en', true).steps;
+        assert.equal(full[1].content.split('\n').length, 150);
+    } finally {
+        setFullStepDetail(false);
+    }
+});
 
 test('Caesar: known value, case and punctuation preserved', () => {
     const enc = Caesar.encode('Hello, World!', 3, 'en', true);

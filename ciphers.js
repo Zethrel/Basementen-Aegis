@@ -62,6 +62,34 @@ function processChars(text, retainPunctuation, transformLetter) {
     return { result, letterSteps };
 }
 
+/* --------------------------------------------------------------------------
+   Per-character step summarization. Long inputs would otherwise dump one
+   line per character into the process panel (megabytes of DOM text at the
+   input cap). Beyond the limit, show the first and last few steps with an
+   omission marker; the UI's "Full step detail" toggle flips the module flag
+   and re-runs the conversion for a complete audit trail.
+   -------------------------------------------------------------------------- */
+const STEP_DETAIL_LIMIT = 60; // full detail up to this many step lines
+const STEP_EDGE_COUNT = 10;   // lines kept from each end when summarizing
+
+let fullStepDetail = false;
+
+export function setFullStepDetail(on) {
+    fullStepDetail = !!on;
+}
+
+function summarizeSteps(lines) {
+    if (fullStepDetail || lines.length <= STEP_DETAIL_LIMIT) {
+        return lines.join('\n');
+    }
+    const omitted = lines.length - STEP_EDGE_COUNT * 2;
+    return [
+        ...lines.slice(0, STEP_EDGE_COUNT),
+        `··· ${omitted} steps omitted (${lines.length} total — enable "Full step detail" to see everything) ···`,
+        ...lines.slice(-STEP_EDGE_COUNT)
+    ].join('\n');
+}
+
 /**
  * 1. CAESAR CIPHER
  * One cipher, three alphabets: plain English A-Z or the Scandinavian
@@ -110,7 +138,7 @@ function caesarRun(text, shift, variant, retainPunctuation, direction) {
         return { char: newChar, step: `'${char}' (index ${index}) ${encoding ? '+' : '-'} Shift ${shift} -> index ${newIndex} -> '${newChar}'` };
     });
 
-    steps.push({ title: "Character Processing", content: letterSteps.join('\n') });
+    steps.push({ title: "Character Processing", content: summarizeSteps(letterSteps) });
     return { result, steps };
 }
 
@@ -167,7 +195,7 @@ export const Atbash = {
             return { char: encodedChar, step: `'${char}' (index ${originalIndex}) -> Reversed index ${newIndex} -> '${encodedChar}'` };
         });
 
-        steps.push({ title: "Character Processing", content: letterSteps.join('\n') });
+        steps.push({ title: "Character Processing", content: summarizeSteps(letterSteps) });
         return { result, steps };
     },
     decode(text, _, retainPunctuation) {
@@ -206,7 +234,7 @@ export const Vigenere = {
             return { char: encodedChar, step: `'${char}' (index ${plainIdx}) + Key '${keyChar}' (shift ${shift}) -> index ${cipherIdx} -> '${encodedChar}'` };
         });
 
-        steps.push({ title: "Key Alignment & Shifts", content: letterSteps.join('\n') });
+        steps.push({ title: "Key Alignment & Shifts", content: summarizeSteps(letterSteps) });
         return { result, steps };
     },
 
@@ -234,7 +262,7 @@ export const Vigenere = {
             return { char: decodedChar, step: `'${char}' (index ${cipherIdx}) - Key '${keyChar}' (shift ${shift}) -> index ${plainIdx} -> '${decodedChar}'` };
         });
 
-        steps.push({ title: "Key Alignment & Shifts", content: letterSteps.join('\n') });
+        steps.push({ title: "Key Alignment & Shifts", content: summarizeSteps(letterSteps) });
         return { result, steps };
     }
 };
@@ -395,7 +423,7 @@ export const BinaryConverter = {
 
         steps.push({
             title: "ASCII to Binary Mapping",
-            content: letterSteps.join('\n')
+            content: summarizeSteps(letterSteps)
         });
 
         return { result: resultArr.join(' '), steps };
@@ -423,7 +451,7 @@ export const BinaryConverter = {
 
         steps.push({
             title: "Binary to Character Decoupling",
-            content: letterSteps.join('\n')
+            content: summarizeSteps(letterSteps)
         });
 
         return { result, steps };
@@ -485,7 +513,7 @@ export const A1z26 = {
 
         steps.push({
             title: "Character to Alphabet Position",
-            content: details.join('\n')
+            content: summarizeSteps(details)
         });
 
         return { result: result.trim(), steps };
@@ -534,7 +562,7 @@ export const A1z26 = {
 
         steps.push({
             title: "Numbers to Letters Translation",
-            content: details.join('\n')
+            content: summarizeSteps(details)
         });
 
         return { result, steps };
@@ -627,7 +655,7 @@ export const BinaryReverse = {
 
         steps.push({
             title: "Encoding Process Details",
-            content: details.join('\n')
+            content: summarizeSteps(details)
         });
 
         return { result: result.trim(), steps };
@@ -739,7 +767,7 @@ export const BinaryReverse = {
 
         steps.push({
             title: "Decoding Process Details",
-            content: details.join('\n')
+            content: summarizeSteps(details)
         });
 
         return { result, steps };
@@ -810,7 +838,7 @@ export const Futhark = {
             i++;
         }
 
-        steps.push({ title: "Character Transliteration", content: details.join('\n') });
+        steps.push({ title: "Character Transliteration", content: summarizeSteps(details) });
         return { result, steps };
     },
 
@@ -837,7 +865,7 @@ export const Futhark = {
             }
         }
 
-        steps.push({ title: "Rune Translation", content: details.join('\n') });
+        steps.push({ title: "Rune Translation", content: summarizeSteps(details) });
         return { result, steps };
     }
 };
@@ -906,7 +934,7 @@ export const Morse = {
             }
         }
 
-        steps.push({ title: "Character Encoding", content: details.join('\n') });
+        steps.push({ title: "Character Encoding", content: summarizeSteps(details) });
         return { result: tokens.join(' '), steps };
     },
 
@@ -936,7 +964,7 @@ export const Morse = {
             }
         }
 
-        steps.push({ title: "Code Translation", content: details.join('\n') });
+        steps.push({ title: "Code Translation", content: summarizeSteps(details) });
         return { result, steps };
     }
 };
