@@ -302,6 +302,33 @@ function showActiveParameterGroup() {
 }
 
 /**
+ * When the user flips encode/decode, carry the previous output into the
+ * input (like the swap arrow in a translator app): the ciphertext Encode
+ * produced becomes the input Decode operates on, and vice versa — so
+ * switching modes round-trips the message instead of decoding plaintext
+ * into gibberish. Skipped when there's nothing meaningful to carry over:
+ * empty or status/error outputs, The Basementen (its fields are
+ * password-gated and cleared per mode by design), and modeless helpers.
+ */
+function swapIOForModeChange() {
+    if (state.cipher === 'basementen') return;
+    const entry = getCipher(state.cipher);
+    if (entry && entry.modeless) return;
+
+    const output = elements.textOutput.value;
+    if (!output) return;
+    if (output.startsWith('Error executing conversion') ||
+        output.startsWith('[') ||
+        output.startsWith('LOCKED:')) return;
+
+    elements.textInput.value = output;
+    // Some outputs are larger than their input (e.g. Binary Converter is
+    // ~8x); the usual guardrails apply to the swapped-in text too.
+    enforceInputLimits();
+    elements.inputStats.textContent = `${elements.textInput.value.length} characters`;
+}
+
+/**
  * Bind DOM Event Listeners
  */
 function bindEvents() {
@@ -334,8 +361,11 @@ function bindEvents() {
         });
     });
 
-    // Mode Buttons
+    // Mode Buttons (re-clicking the active mode is a no-op; a real switch
+    // first carries the output over as the new mode's input)
     elements.modeEncode.addEventListener('click', () => {
+        if (state.mode === 'encode') return;
+        swapIOForModeChange();
         state.mode = 'encode';
         elements.modeEncode.classList.add('active');
         elements.modeDecode.classList.remove('active');
@@ -345,6 +375,8 @@ function bindEvents() {
     });
 
     elements.modeDecode.addEventListener('click', () => {
+        if (state.mode === 'decode') return;
+        swapIOForModeChange();
         state.mode = 'decode';
         elements.modeEncode.classList.remove('active');
         elements.modeDecode.classList.add('active');
