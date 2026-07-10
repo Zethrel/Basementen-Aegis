@@ -40,10 +40,13 @@ import { vaultSession } from './vault.js';
    ========================================================================== */
 export const CIPHERS = [
     {
-        id: 'a1z26', name: 'A1Z26 Cipher', shortName: 'A1Z26', icon: 'hash', paramGroup: 'param-none',
-        run: (input, mode, opts) => mode === 'encode'
-            ? A1z26.encode(input, null, opts.retainPunctuation)
-            : A1z26.decode(input, null, opts.retainPunctuation)
+        id: 'a1z26', name: 'A1Z26 Cipher', shortName: 'A1Z26', icon: 'hash', paramGroup: 'param-a1z26',
+        run: (input, mode, opts) => {
+            const variant = elements.a1z26Alphabet.value;
+            return mode === 'encode'
+                ? A1z26.encode(input, variant, opts.retainPunctuation)
+                : A1z26.decode(input, variant, opts.retainPunctuation);
+        }
     },
     {
         id: 'anagram', name: 'Anagram Helper', shortName: 'Anagram', icon: 'shuffle',

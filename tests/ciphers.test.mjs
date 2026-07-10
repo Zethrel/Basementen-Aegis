@@ -142,6 +142,20 @@ test('A1Z26: out-of-range numbers decode to "?"', () => {
     assert.equal(A1z26.decode('27-1', null, true).result, '?A');
 });
 
+test('A1Z26: Scandinavian alphabets extend to position 29', () => {
+    const enc = A1z26.encode('Blåbær', 'dk-no', true);
+    assert.equal(enc.result, '2-12-29-2-27-18');
+    assert.equal(A1z26.decode(enc.result, 'dk-no', true).result, 'BLÅBÆR');
+
+    const se = A1z26.encode('Höst', 'se', true);
+    assert.equal(se.result, '8-29-19-20');
+    assert.equal(A1z26.decode(se.result, 'se', true).result, 'HÖST');
+
+    // 27 is valid in dk-no (Æ) but out of range in English
+    assert.equal(A1z26.decode('27', 'dk-no', true).result, 'Æ');
+    assert.equal(A1z26.decode('27', 'en', true).result, '?');
+});
+
 test('Binary Reverse: randomized encoding still round trips in both width modes', () => {
     // Digit choice is random per character, so encode twice: outputs may
     // differ but both must decode back to the same (uppercased) plaintext.

@@ -244,6 +244,7 @@ export function setupUIFromState() {
 
     // Set Toggles
     elements.optPunctuation.checked = state.retainPunctuation;
+    elements.optCarryText.checked = state.carryText;
     elements.optProcess.checked = state.showProcess;
     elements.optFullSteps.checked = state.fullSteps;
     setFullStepDetail(state.fullSteps);
@@ -339,7 +340,8 @@ function bindEvents() {
     elements.cipherBtns.forEach(btn => {
         btn.addEventListener('click', () => {
             const selectedCipher = btn.dataset.cipher;
-            
+            if (selectedCipher === state.cipher) return;
+
             if (state.cipher !== 'basementen') {
                 previousCipher = state.cipher;
             }
@@ -347,6 +349,15 @@ function bindEvents() {
             // Click away from basementen: lock it immediately and clear in-memory key
             if (state.cipher === 'basementen' && selectedCipher !== 'basementen') {
                 lockBasementenSession();
+            }
+
+            // Fresh slate per cipher unless the user opted into carrying
+            // their text over (the "Carry Text" toggle)
+            if (!state.carryText) {
+                elements.textInput.value = '';
+                elements.textOutput.value = '';
+                elements.inputStats.textContent = '0 characters';
+                elements.outputStats.textContent = '0 characters';
             }
 
             state.cipher = selectedCipher;
@@ -390,6 +401,11 @@ function bindEvents() {
         state.retainPunctuation = e.target.checked;
         saveConfigState();
         runConversion();
+    });
+
+    elements.optCarryText.addEventListener('change', (e) => {
+        state.carryText = e.target.checked;
+        saveConfigState();
     });
 
     elements.optProcess.addEventListener('change', (e) => {
@@ -441,6 +457,11 @@ function bindEvents() {
             elements.caesarShift.value = max;
         }
         elements.shiftValue.textContent = elements.caesarShift.value;
+        runConversion();
+    });
+
+    // A1Z26 Alphabet Select
+    elements.a1z26Alphabet.addEventListener('change', () => {
         runConversion();
     });
 

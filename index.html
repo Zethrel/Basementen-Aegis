@@ -189,6 +189,22 @@
                             </div>
                         </div>
 
+                        <!-- A1Z26 Alphabet -->
+                        <div class="param-group" id="param-a1z26">
+                            <div class="param-subfield">
+                                <label for="a1z26-alphabet">Alphabet:</label>
+                                <select id="a1z26-alphabet" class="select-dropdown">
+                                    <option value="en">English (A=1 … Z=26)</option>
+                                    <option value="dk-no">Danish & Norwegian (… Æ=27, Ø=28, Å=29)</option>
+                                    <option value="se">Swedish (… Å=27, Ä=28, Ö=29)</option>
+                                </select>
+                            </div>
+                            <div class="param-info">
+                                <p class="param-info-title"><i data-lucide="info"></i> A1Z26 Guide</p>
+                                <p>Each letter becomes its alphabet position, hyphen-separated per word. Decode with the same alphabet the message was encoded with.</p>
+                            </div>
+                        </div>
+
                         <!-- Binary Reverse Format Mode -->
                         <div class="param-group" id="param-binreverse">
                             <div class="param-subfield">
@@ -234,6 +250,11 @@
                             <input type="checkbox" id="option-punctuation" checked>
                             <span class="slider"></span>
                             <span class="option-label">Retain Punctuation</span>
+                        </label>
+                        <label class="toggle-option" title="Keep the input and output text when switching to another cipher">
+                            <input type="checkbox" id="option-carry-text">
+                            <span class="slider"></span>
+                            <span class="option-label">Carry Text</span>
                         </label>
                         <label class="toggle-option">
                             <input type="checkbox" id="option-process" checked>

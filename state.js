@@ -9,6 +9,7 @@ export const state = {
     cipher: 'caesar',
     mode: 'encode',
     retainPunctuation: true,
+    carryText: false,
     showProcess: true,
     fullSteps: false
 };
@@ -50,6 +51,7 @@ export function loadSavedState() {
             state.cipher = migrateCipherId(parsed.cipher) || 'caesar';
             state.mode = parsed.mode || 'encode';
             state.retainPunctuation = parsed.retainPunctuation !== undefined ? parsed.retainPunctuation : true;
+            state.carryText = parsed.carryText !== undefined ? parsed.carryText : false;
             state.showProcess = parsed.showProcess !== undefined ? parsed.showProcess : true;
             state.fullSteps = parsed.fullSteps !== undefined ? parsed.fullSteps : false;
         } catch (e) {
@@ -75,6 +77,7 @@ export function saveConfigState() {
         cipher: state.cipher,
         mode: state.mode,
         retainPunctuation: state.retainPunctuation,
+        carryText: state.carryText,
         showProcess: state.showProcess,
         fullSteps: state.fullSteps
     };

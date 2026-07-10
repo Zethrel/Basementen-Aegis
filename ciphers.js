@@ -462,17 +462,22 @@ export const BinaryConverter = {
  * 7. A1Z26 CIPHER
  */
 export const A1z26 = {
-    encode(text, _, retainPunctuation) {
+    encode(text, variant, retainPunctuation) {
+        // Shares the Caesar alphabet table: English is A=1..Z=26, the
+        // Scandinavian variants continue to 27/28/29 for their extra letters.
+        const alphabet = CAESAR_ALPHABETS[variant] || CAESAR_ALPHABETS['en'];
         let resultArr = [];
-        const steps = [];
+        const steps = [{ title: "Configuration", content: `Alphabet: ${alphabet.label}` }];
         const details = [];
 
         let currentWord = [];
 
         for (let i = 0; i < text.length; i++) {
             const char = text[i];
-            if (isLetter(char)) {
-                const pos = getAlphabetIndex(char) + 1;
+            let idx = alphabet.upper.indexOf(char);
+            if (idx === -1) idx = alphabet.lower.indexOf(char);
+            if (idx !== -1) {
+                const pos = idx + 1;
                 currentWord.push(pos.toString());
                 details.push(`'${char}' -> Alphabet Index: ${pos}`);
             } else {
@@ -519,11 +524,13 @@ export const A1z26 = {
         return { result: result.trim(), steps };
     },
 
-    decode(text, _, retainPunctuation) {
+    decode(text, variant, retainPunctuation) {
+        const alphabet = CAESAR_ALPHABETS[variant] || CAESAR_ALPHABETS['en'];
+        const size = alphabet.upper.length;
         let result = '';
-        const steps = [];
+        const steps = [{ title: "Configuration", content: `Alphabet: ${alphabet.label}` }];
         const details = [];
-        
+
         let i = 0;
         while (i < text.length) {
             const char = text[i];
@@ -534,13 +541,13 @@ export const A1z26 = {
                     i++;
                 }
                 const num = parseInt(numStr, 10);
-                if (num >= 1 && num <= 26) {
-                    const letter = String.fromCharCode(65 + num - 1);
+                if (num >= 1 && num <= size) {
+                    const letter = alphabet.upper[num - 1];
                     result += letter;
                     details.push(`Number '${num}' -> Alphabet Position -> '${letter}'`);
                 } else {
                     result += '?';
-                    details.push(`Number '${num}' out of range (1-26) -> '?'`);
+                    details.push(`Number '${num}' out of range (1-${size}) -> '?'`);
                 }
             } else if (char === '-') {
                 details.push("Skipped hyphen separator");

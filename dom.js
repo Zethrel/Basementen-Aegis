@@ -13,6 +13,7 @@ export const elements = {
     modeDecode: document.getElementById('mode-decode'),
     // Option Toggles
     optPunctuation: document.getElementById('option-punctuation'),
+    optCarryText: document.getElementById('option-carry-text'),
     optProcess: document.getElementById('option-process'),
     optFullSteps: document.getElementById('option-full-steps'),
     processSection: document.getElementById('process-section'),
@@ -23,6 +24,7 @@ export const elements = {
     caesarShiftDown: document.getElementById('caesar-shift-down'),
     caesarShiftUp: document.getElementById('caesar-shift-up'),
     caesarAlphabet: document.getElementById('caesar-alphabet'),
+    a1z26Alphabet: document.getElementById('a1z26-alphabet'),
     binreverseFormat: document.getElementById('binreverse-format'),
     caesarbruteAlphabet: document.getElementById('caesarbrute-alphabet'),
     caesarbruteShift: document.getElementById('caesarbrute-shift'),
