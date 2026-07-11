@@ -6,4 +6,4 @@
  * CACHE_VERSION in sw.js so installed clients pick up the new build.
  */
 
-export const APP_VERSION = '1.1.2';
+export const APP_VERSION = '1.1.3';
