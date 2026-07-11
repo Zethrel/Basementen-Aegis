@@ -12,11 +12,17 @@ Created by Zethrel.
 
 **Or skip the download entirely:** use it in your browser at [zethrel.github.io/Basementen-Aegis](https://zethrel.github.io/Basementen-Aegis/) — on a phone or desktop you can install it as an app from the browser menu, and it keeps working offline.
 
-## Ciphers
+## Classic Ciphers & Encoding Tools
 
-Caesar (English or Danish/Norwegian/Swedish alphabets) · ROT13 · Atbash · Vigenère · Rail Fence · Binary Converter · A1Z26 · Binary Reverse (custom) · Elder Futhark runes · Morse code (with Æ/Ø/Å) · Anagram Helper · Caesar Brute Force helper (cracks unknown shifts, English or Scandinavian alphabets)
+> **Important:** Except for The Basementen, every cipher in this application is included for learning, puzzles, and fun between friends. They are not secure encryption and should never be relied on to protect sensitive information.
 
-Plus **The Basementen** — a password-protected vault cipher. Messages are encrypted with AES-256-GCM (ciphertext format `SB1:<base64>`), and the vault's keys and transaction history are also AES-256-GCM encrypted at rest with keys derived from your passwords via Argon2id (memory-hard, 64 MiB).
+Caesar (English or Danish/Norwegian/Swedish alphabets) · ROT13 · Atbash · Vigenère · Rail Fence · Binary Converter · A1Z26 (English or Scandinavian alphabets) · Binary Reverse (custom) · Elder Futhark runes · Morse code (with Æ/Ø/Å) · Anagram Helper · Caesar Brute Force helper (cracks unknown shifts, English or Scandinavian alphabets)
+
+## Secure Vault
+
+**The Basementen** — a password-protected encrypted vault. Messages are encrypted with AES-256-GCM (ciphertext format `SB1:<base64>`), and the vault's keys and transaction history are also AES-256-GCM encrypted at rest with keys derived from your passwords via Argon2id (memory-hard, 64 MiB).
+
+**Threat model:** The Basementen is designed to protect stored messages against someone who gains access to your files without knowing your password. It does not protect against malware running on your computer or someone who knows your password.
 
 ## Features
 
