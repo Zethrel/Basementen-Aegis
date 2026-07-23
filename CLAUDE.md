@@ -42,15 +42,13 @@ Build and sign on the same machine — the certificate lives in that machine's u
 
 The web app is a set of ES modules with `app.js` as the entry point (the only file `index.html` loads with `<script type="module">`):
 
-- **`ciphers.js`** — pure cipher algorithms, no DOM access. Each cipher is an exported object with `encode(text, param, retainPunctuation)` / `decode(...)` methods that return `{ result: string, steps: Array<{ title, content }> }`. The `steps` array drives the step-by-step process panel in the UI. Simple substitution ciphers (Caesar, Atbash, Vigenère) share the `processChars()` per-character loop helper. Caesar takes a `variant` parameter selecting its alphabet from `CAESAR_ALPHABETS` (English or the 29-letter Danish/Norwegian and Swedish sets, shared with the brute-force helper). The Basementen cipher is the exception: it's `async` (WebCrypto AES-256-GCM) and returns empty `steps`.
+- **`ciphers.js`** — pure cipher algorithms, no DOM access. Each cipher is an exported object with `encode(text, param, retainPunctuation)` / `decode(...)` methods that return `{ result: string, steps: Array<{ title, content }> }`. The `steps` array drives the step-by-step process panel in the UI. Simple substitution ciphers (Caesar, Atbash, Vigenère) share the `processChars()` per-character loop helper. Caesar and A1Z26 take a `variant` parameter selecting an alphabet from `CAESAR_ALPHABETS` (English or the 29-letter Danish/Norwegian and Swedish sets, shared with the brute-force helper).
 
 - **`registry.js`** — the `CIPHERS` registry array, the single source of truth for every cipher: each entry declares `id`, `name`, `shortName`, `icon` (a Lucide icon name), `paramGroup` (the id of a parameter panel in `index.html`), optional `badge`, `modeless: true` for helpers with no encode/decode split, optional `ioLabels`, and a `run(input, mode, opts)` function that reads its parameters from `elements` and calls into `ciphers.js`. The sidebar nav is generated from this registry (`renderCipherNav`).
 
 - **`app.js`** — the controller/entry module: `init()`, `runConversion()` dispatching through the registry, the process panel rendering, `setupUIFromState()`, all cipher-agnostic event handlers, and service-worker registration.
 
-- **`dom.js`** (`elements` map of every DOM node), **`state.js`** (shared `state` object + localStorage load/save/migration), **`ui.js`** (modals, toasts, `showConfirm`), **`vault.js`** (everything Basementen: `vaultSession` in-memory state, crypto helpers, setup/unlock/wipe flows, the encrypted transaction log, the debounced auto-save, and `bindVaultEvents()`). There is deliberately no plaintext history for the other ciphers — only Basementen work is persisted, encrypted, in the vault log.
-
-  Note: `vault.js` deliberately imports `setupUIFromState`/`runConversion` back from `app.js` (circular import). This is safe because those calls only happen at runtime from event handlers, never during module evaluation — keep it that way when adding top-level code to this module.
+- **`dom.js`** (`elements` map of every DOM node), **`state.js`** (shared `state` object + localStorage load/save/migration), **`ui.js`** (modals, toasts, `showConfirm`). No message text is ever persisted — only interface preferences in `aegis_state`.
 
 - **`index.html`** — holds one `.param-group` div per parameter panel (`param-caesar`, `param-vigenere`, …, and `param-none` for parameterless ciphers). `showActiveParameterGroup()` in `app.js` toggles them by id.
 
@@ -72,18 +70,11 @@ Whenever any file listed in `PRECACHE_URLS` changes (which includes `app.js`, `c
 
 ### Offline constraint
 
-The app must work fully offline. All dependencies are vendored locally (`lucide.min.js`, `qrcode.js`, `argon2-bundled.min.js`, `fonts/`). Never add a CDN link, external font, or any network fetch to the web app.
+The app must work fully offline. All dependencies are vendored locally (`lucide.min.js`, `qrcode.js`, `fonts/`). Never add a CDN link, external font, or any network fetch to the web app.
 
-## The Basementen vault
+## Educational scope
 
-The password-protected cipher has its crypto split across both JS files:
-
-- `ciphers.js` (`Basementen`): message encryption. AES-256-GCM via WebCrypto, key = SHA-256 of the transaction key string (fine — that key is 40 random chars, >256 bits of entropy), 12-byte random IV prepended to the ciphertext, output format `SB1:<base64(iv + ciphertext)>`.
-- `vault.js`: vault/session management. Passwords derive AES keys via **Argon2id** (`deriveKeyFromPassword`, 64 MiB / t=3 / p=1) that encrypt the vault's transaction keys and history at rest. Argon2id runs in a dedicated Web Worker (`argon2-worker.js` + vendored `argon2-bundled.min.js`, MIT) because the WASM computes synchronously on its calling thread. **PBKDF2 (600k iterations) remains as a decrypt-only legacy path**: the master blob's KDF is tracked in `localStorage` (`basementen_kdf`, absent = pbkdf2) and upgrades to Argon2id on the next successful unlock; log entries carry a per-entry `kdf` field and old ones stay PBKDF2 forever (their passwords aren't known). If Argon2 parameters ever change, tag the new scheme (e.g. `argon2id-v2`) instead of altering `ARGON2_PARAMS` — stored blobs are bound to the parameters they were created with.
-
-Transaction log entries all share one per-vault salt (`basementen_tx_salt`), so a decode-mode password search costs a single Argon2id derivation regardless of log size (pre-shared-salt entries keep their per-entry salts; derived keys are deduplicated through the in-session `txKeyCache`). The log caps at `TX_LOG_CAP` entries: at the cap, explicit saves require confirming the permanent loss of the oldest entry's key, and auto-save drafts pause rather than evict.
-
-Persistent state lives in `localStorage` under `aegis_state` and `basementen_salt` / `basementen_iv` / `basementen_encrypted_key` / `basementen_kdf` / `basementen_tx_salt` / `basementen_history`. `migrateLegacyStorage()` in `state.js` renames pre-rebrand keys; keep it in mind if renaming keys again.
+Basementen Aegis is purely an educational cipher toolkit. Every cipher is a classic/historical algorithm for learning and puzzles — none is secure encryption, and the app says so in the sidebar disclaimer and README. There is intentionally no cryptography-at-rest, no passwords, and no stored message content; the only persisted state is interface preferences in `aegis_state` (see `state.js`). (The app previously shipped a password-protected AES-256-GCM vault called "The Basementen"; it was removed. `migrateCipherId()` in `state.js` maps the retired `basementen` cipher id to `caesar`, and any orphaned `basementen_*` localStorage keys from old installs are left untouched rather than deleted.)
 
 ## Conventions
 

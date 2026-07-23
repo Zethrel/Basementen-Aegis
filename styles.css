@@ -14,32 +14,32 @@
     --bg-surface-glass: rgba(17, 24, 39, 0.6);
     --border-glass: rgba(255, 255, 255, 0.08);
     --border-glass-hover: rgba(255, 255, 255, 0.15);
-    
+
     --color-text-primary: #f3f4f6;
     --color-text-secondary: #9ca3af;
     --color-text-muted: #6b7280;
-    
+
     --color-primary: #06b6d4;      /* Cyber Cyan */
     --color-primary-glow: rgba(6, 182, 212, 0.35);
     --color-secondary: #6366f1;    /* Electric Purple */
     --color-secondary-glow: rgba(99, 102, 241, 0.3);
-    
+
     --color-success: #10b981;      /* Matrix Green */
     --color-success-glow: rgba(16, 185, 129, 0.2);
-    
+
     --color-danger: #ef4444;       /* Alert Red */
     --color-warning: #f59e0b;
-    
+
     --font-sans: 'Outfit', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
     --font-mono: 'JetBrains Mono', monospace;
-    
+
     --radius-lg: 16px;
     --radius-md: 10px;
     --radius-sm: 6px;
-    
+
     --transition-fast: 0.2s cubic-bezier(0.4, 0, 0.2, 1);
     --transition-normal: 0.35s cubic-bezier(0.4, 0, 0.2, 1);
-    
+
     --shadow-neon-cyan: 0 0 15px rgba(6, 182, 212, 0.25);
     --shadow-neon-purple: 0 0 15px rgba(99, 102, 241, 0.2);
 }
@@ -82,7 +82,7 @@ body::before {
     left: 0;
     right: 0;
     bottom: 0;
-    background-image: 
+    background-image:
         linear-gradient(rgba(6, 182, 212, 0.03) 1px, transparent 1px),
         linear-gradient(90deg, rgba(6, 182, 212, 0.03) 1px, transparent 1px);
     background-size: 40px 40px;
@@ -111,7 +111,7 @@ body::before {
 }
 
 /* Firefox scrollbars (::-webkit-scrollbar rules don't apply there) */
-:root, textarea, .process-content, .log-table-wrap {
+:root, textarea, .process-content {
     scrollbar-width: thin;
     scrollbar-color: var(--border-glass-hover) var(--bg-app);
 }
@@ -430,12 +430,6 @@ body::before {
     background: rgba(16, 185, 129, 0.2);
     border-color: rgba(16, 185, 129, 0.3);
     color: #10b981;
-}
-
-.badge-secure {
-    background: rgba(239, 68, 68, 0.2);
-    border-color: rgba(239, 68, 68, 0.3);
-    color: #ef4444;
 }
 
 /* Workspace Panels */
@@ -782,24 +776,6 @@ textarea {
 }
 
 /* History Log Panel */
-.history-badge {
-    font-size: 0.65rem;
-    padding: 1px 6px;
-    border-radius: 4px;
-    font-weight: 700;
-    font-family: var(--font-mono);
-    text-transform: uppercase;
-}
-
-.history-badge.encode {
-    background-color: var(--color-primary-glow);
-    color: var(--color-primary);
-}
-
-.history-badge.decode {
-    background-color: rgba(99, 102, 241, 0.15);
-    color: var(--color-secondary);
-}
 
 /* Footer Section */
 .app-footer {
@@ -1076,108 +1052,6 @@ textarea {
     }
 }
 
-/* ==========================================================================
-   BASEMENTEN PANEL & MODALS
-   Classes replacing the former per-element inline styles.
-   ========================================================================== */
-
-/* Control panel */
-.basementen-ctrls {
-    display: flex;
-    flex-direction: column;
-    gap: 12px;
-    align-items: flex-start;
-    width: 100%;
-}
-
-.basementen-status-row {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-}
-
-.basementen-status-label {
-    font-size: 0.85rem;
-    color: var(--color-text-secondary);
-    display: flex;
-    align-items: center;
-    gap: 4px;
-}
-
-.basementen-status-label svg {
-    width: 14px;
-    height: 14px;
-    color: var(--color-success);
-}
-
-#basementen-key-status {
-    font-size: 0.85rem;
-    font-weight: 600;
-    color: var(--color-success);
-}
-
-#basementen-key-status.locked {
-    color: #ef4444;
-}
-
-.basementen-ctrls .input-group {
-    width: 100%;
-    margin-top: 5px;
-    margin-bottom: 5px;
-}
-
-.basementen-ctrls .input-group label {
-    font-size: 0.8rem;
-    margin-bottom: 6px;
-    display: block;
-    color: var(--color-text-secondary);
-    text-align: left;
-}
-
-.basementen-ctrls .input-group .input-text {
-    width: 100%;
-    padding: 8px 12px;
-    font-size: 0.85rem;
-}
-
-.field-error {
-    color: #ef4444;
-    font-size: 11px;
-    font-weight: 600;
-    display: block;
-    margin-top: 4px;
-    min-height: 14px;
-}
-
-/* Inline "Verifying password…" indicator shown while the debounced
-   PBKDF2 password checks run (they take a moment by design). */
-.field-verifying {
-    display: inline-flex;
-    align-items: center;
-    gap: 5px;
-    color: var(--color-primary);
-    font-size: 11px;
-    font-weight: 600;
-    margin-top: 4px;
-}
-
-.field-verifying svg {
-    width: 12px;
-    height: 12px;
-    animation: spin 1s linear infinite;
-}
-
-@keyframes spin {
-    to { transform: rotate(360deg); }
-}
-
-.basementen-btn-row {
-    display: flex;
-    gap: 8px;
-    flex-wrap: wrap;
-    width: 100%;
-}
-
 .btn-sm svg {
     width: 14px;
     height: 14px;
@@ -1187,53 +1061,6 @@ textarea {
 .btn-block {
     width: 100%;
     justify-content: center;
-}
-
-#basementen-copy-output {
-    margin-top: 8px;
-}
-
-/* Auto-recognition status panel (decode mode) */
-.auto-recognize-panel {
-    width: 100%;
-    border-radius: var(--radius-md);
-    padding: 12px;
-    margin-top: 8px;
-    text-align: left;
-}
-
-.auto-recognize-panel.success {
-    background: rgba(16, 185, 129, 0.08);
-    border: 1px solid rgba(16, 185, 129, 0.2);
-}
-
-.auto-recognize-panel.danger {
-    background: rgba(239, 68, 68, 0.08);
-    border: 1px solid rgba(239, 68, 68, 0.2);
-}
-
-.auto-status-title {
-    font-size: 0.8rem;
-    font-weight: 700;
-    display: flex;
-    align-items: center;
-    gap: 6px;
-    margin-bottom: 6px;
-}
-
-.auto-recognize-panel.success .auto-status-title { color: #10b981; }
-.auto-recognize-panel.danger .auto-status-title { color: #ef4444; }
-
-.auto-status-title svg {
-    width: 14px;
-    height: 14px;
-}
-
-.auto-status-desc {
-    font-size: 0.75rem;
-    margin: 0;
-    line-height: 1.4;
-    color: var(--color-text-secondary);
 }
 
 /* Parameter panel helpers */
@@ -1339,123 +1166,10 @@ textarea {
 }
 
 /* Per-modal header icon accents */
-#basementen-setup-modal .modal-header h3 svg { color: #ef4444; }
-#basementen-unlock-modal .modal-header h3 svg { color: #6366f1; }
-#basementen-log-modal .modal-header h3 svg { color: #06b6d4; }
-#basementen-reveal-key-modal .modal-header h3 svg { color: #06b6d4; }
 
 /* Setup modal */
-.warning-alert-box {
-    background: rgba(239, 68, 68, 0.1);
-    border: 1px solid rgba(239, 68, 68, 0.25);
-    border-radius: var(--radius-md);
-    padding: 15px;
-    color: #fca5a5;
-    font-size: 14px;
-    line-height: 1.5;
-    display: flex;
-    flex-direction: column;
-    gap: 8px;
-}
-
-.warning-alert-title {
-    font-weight: 700;
-    color: #ef4444;
-    display: flex;
-    align-items: center;
-    gap: 6px;
-}
-
-.warning-alert-box .warning-important {
-    color: #ffffff;
-}
-
-#setup-countdown-container {
-    text-align: center;
-    padding: 10px;
-    font-weight: 600;
-    color: var(--color-text-secondary);
-}
 
 /* Starts dimmed & inert during the countdown; JS lifts it via inline style */
-#basementen-setup-form {
-    opacity: 0.4;
-    pointer-events: none;
-    transition: opacity 0.3s ease;
-}
-
-#basementen-setup-submit {
-    margin-top: 8px;
-    width: 100%;
-}
-
-/* Transaction log table */
-.log-table-wrap {
-    max-height: 350px;
-    overflow-y: auto;
-    border: 1px solid var(--border-glass);
-    border-radius: var(--radius-md);
-    background: rgba(0, 0, 0, 0.2);
-}
-
-.log-table {
-    width: 100%;
-    border-collapse: collapse;
-    text-align: left;
-    font-size: 13px;
-}
-
-.log-table th,
-.log-table td {
-    padding: 10px;
-    border-bottom: 1px solid var(--border-glass);
-}
-
-.log-table td {
-    color: var(--color-text-secondary);
-}
-
-.log-table th {
-    font-weight: 600;
-    color: var(--color-text-primary);
-    background: rgba(255, 255, 255, 0.03);
-}
-
-.log-table td.key-cell {
-    font-family: var(--font-mono);
-    color: var(--color-primary);
-    word-break: break-all;
-    font-size: 11px;
-    max-width: 160px;
-}
-
-.log-table td.io-cell {
-    max-width: 120px;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-}
-
-.log-table tbody tr:hover td {
-    background: rgba(255, 255, 255, 0.01);
-    color: var(--color-text-primary);
-}
-
-.log-empty {
-    text-align: center;
-    padding: 15px;
-    color: var(--color-text-muted);
-}
-
-.reveal-link {
-    color: var(--color-primary);
-    cursor: pointer;
-    text-decoration: underline;
-}
-
-.log-table td.revealed {
-    color: #10b981;
-}
 
 /* Spacing utilities for one-off overrides */
 .m-0 { margin: 0; }
@@ -1486,7 +1200,7 @@ textarea {
     .app-container {
         padding: 1rem;
     }
-    
+
     .app-layout {
         grid-template-columns: 1fr;
     }
@@ -1501,7 +1215,7 @@ textarea {
         border-bottom: 1px solid var(--border-glass);
         padding-bottom: 1rem;
     }
-    
+
     /* On small screens the cipher list becomes a horizontally scrollable
        pill row instead of a tall wrapped grid, keeping the workspace high
        up on the page while preserving one-tap switching, icons and badges. */
@@ -1538,25 +1252,15 @@ textarea {
     .cipher-select-btn .badge-custom {
         margin-left: 8px;
     }
-    
+
     .control-panel {
         flex-direction: column;
         align-items: stretch;
     }
-    
+
     .general-options {
         justify-content: space-between;
     }
-}
-
-/* ==========================================================================
-   THE BASEMENTEN SECURE CIPHER STYLES
-   ========================================================================== */
-#setup-countdown-container {
-    background: rgba(255, 255, 255, 0.03);
-    border: 1px dashed var(--border-glass);
-    border-radius: var(--radius-md);
-    padding: 12px;
 }
 
 /* Decode Mode Special Theme (Purple/Amethyst Theme) */
@@ -1591,31 +1295,6 @@ body.mode-decode .mode-btn.active {
 /* Add a beautiful animated transition when switching views */
 .console-panel {
     transition: border-color var(--transition-normal), box-shadow var(--transition-normal), background var(--transition-normal);
-}
-
-/* Master Password Strength Meter */
-.pwd-strength-meter {
-    width: 100%;
-    height: 5px;
-    border-radius: 50px;
-    background: rgba(255, 255, 255, 0.08);
-    margin-top: 8px;
-    overflow: hidden;
-}
-
-.pwd-strength-bar {
-    height: 100%;
-    width: 0%;
-    border-radius: 50px;
-    background: var(--color-danger);
-    transition: width var(--transition-fast), background-color var(--transition-fast);
-}
-
-.pwd-strength-label {
-    font-size: 0.75rem;
-    color: var(--color-text-muted);
-    margin-top: 4px;
-    min-height: 1em;
 }
 
 /* De-emphasized destructive text link (e.g. "Forgot your password?" recovery option) */

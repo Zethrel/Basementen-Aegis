@@ -9,7 +9,7 @@
  * the new build.
  */
 
-const CACHE_VERSION = 'aegis-v34';
+const CACHE_VERSION = 'aegis-v35';
 
 const PRECACHE_URLS = [
     './',
@@ -21,12 +21,9 @@ const PRECACHE_URLS = [
     './state.js',
     './ui.js',
     './registry.js',
-    './vault.js',
     './ciphers.js',
     './lucide.min.js',
     './qrcode.js',
-    './argon2-bundled.min.js',
-    './argon2-worker.js',
     './manifest.json',
     './fonts/fonts.css',
     './fonts/outfit.woff2',

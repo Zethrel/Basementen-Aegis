@@ -66,6 +66,10 @@ export function loadSavedState() {
 function migrateCipherId(id) {
     // Scandi Caesar merged into Caesar (alphabet dropdown) — same algorithm.
     if (id === 'scandicaesar') return 'caesar';
+    // The Basementen vault was removed; fall back to a valid cipher.
+    // (Any encrypted basementen_* localStorage entries are left untouched
+    // rather than silently destroyed.)
+    if (id === 'basementen') return 'caesar';
     return id;
 }
 

@@ -1,7 +1,6 @@
 /**
  * Cipher algorithm tests. Zero dependencies — runs on Node's built-in test
- * runner (Node >= 22, which auto-detects the ES module syntax in ciphers.js
- * and provides the WebCrypto + btoa globals the Basementen cipher needs):
+ * runner (Node >= 22, which auto-detects the ES module syntax in ciphers.js):
  *
  *     node --test
  */
@@ -21,8 +20,7 @@ import {
     BinaryReverse,
     Futhark,
     Morse,
-    CaesarBruteForce,
-    Basementen
+    CaesarBruteForce
 } from '../ciphers.js';
 
 // Every cipher result must carry the { result, steps } shape that drives the UI.
@@ -221,32 +219,4 @@ test('Caesar Brute Force: structured candidates contain the plaintext at the rig
     const all = CaesarBruteForce.formatAll(out.candidates);
     assert.ok(all.includes('Shift 07: hello world'));
     assert.equal(all.split('\n').length, 26);
-});
-
-test('Basementen: encrypt/decrypt round trip with SB1 format', async () => {
-    const key = 'a-40-char-high-entropy-transaction-key!!';
-    const enc = await Basementen.encode('Meet at the basement at midnight. Blåbær.', key);
-    assertShape(enc);
-    assert.ok(enc.result.startsWith('SB1:'));
-    const dec = await Basementen.decode(enc.result, key);
-    assert.equal(dec.result, 'Meet at the basement at midnight. Blåbær.');
-});
-
-test('Basementen: random IV makes ciphertexts unique for identical input', async () => {
-    const key = 'another-transaction-key-for-this-test';
-    const a = await Basementen.encode('same message', key);
-    const b = await Basementen.encode('same message', key);
-    assert.notEqual(a.result, b.result);
-});
-
-test('Basementen: wrong key and malformed input fail safely', async () => {
-    const enc = await Basementen.encode('secret', 'right-key');
-    const wrong = await Basementen.decode(enc.result, 'wrong-key');
-    assert.ok(wrong.result.startsWith('[DECRYPTION FAILED'));
-
-    const notCiphertext = await Basementen.decode('just some text', 'right-key');
-    assert.ok(notCiphertext.result.startsWith('[NOT A BASEMENTEN CIPHERTEXT'));
-
-    assert.equal((await Basementen.encode('x', '')).result, '');
-    assert.equal((await Basementen.decode('x', '')).result, '');
 });
