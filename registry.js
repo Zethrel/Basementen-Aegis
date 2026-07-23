@@ -7,6 +7,8 @@ import {
     Rot13,
     Atbash,
     Vigenere,
+    Beaufort,
+    Autokey,
     Affine,
     Playfair,
     Polybius,
@@ -79,6 +81,26 @@ export const CIPHERS = [
         run: (input, mode, opts) => mode === 'encode'
             ? Atbash.encode(input, null, opts.retainPunctuation)
             : Atbash.decode(input, null, opts.retainPunctuation)
+    },
+    {
+        id: 'autokey', name: 'Autokey Cipher', shortName: 'Autokey', icon: 'keyboard', paramGroup: 'param-autokey',
+        run: (input, mode, opts) => {
+            const key = elements.autokeyKey.value;
+            const variant = elements.autokeyVariant.value;
+            return mode === 'encode'
+                ? Autokey.encode(input, key, variant, opts.retainPunctuation)
+                : Autokey.decode(input, key, variant, opts.retainPunctuation);
+        }
+    },
+    {
+        id: 'beaufort', name: 'Beaufort Cipher', shortName: 'Beaufort', icon: 'keyboard', paramGroup: 'param-beaufort',
+        run: (input, mode, opts) => {
+            const key = elements.beaufortKey.value;
+            const variant = elements.beaufortVariant.value;
+            return mode === 'encode'
+                ? Beaufort.encode(input, key, variant, opts.retainPunctuation)
+                : Beaufort.decode(input, key, variant, opts.retainPunctuation);
+        }
     },
     {
         id: 'binary', name: 'Binary Converter', shortName: 'Binary', icon: 'binary', paramGroup: 'param-none',

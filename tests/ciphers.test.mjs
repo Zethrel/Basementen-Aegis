@@ -14,6 +14,8 @@ import {
     Rot13,
     Atbash,
     Vigenere,
+    Beaufort,
+    Autokey,
     Affine,
     affineCoprimes,
     Playfair,
@@ -114,6 +116,25 @@ test('Vigenere: classic known value and round trip', () => {
     assertShape(enc);
     assert.equal(enc.result, 'LXFOPVEFRNHR');
     assert.equal(Vigenere.decode(enc.result, 'LEMON', true).result, 'ATTACKATDAWN');
+});
+
+test('Beaufort: canonical value, reciprocity, and Scandinavian round trip', () => {
+    const enc = Beaufort.encode('DEFENDTHEEASTWALL', 'FORTIFICATION', 'en', true);
+    assertShape(enc);
+    assert.equal(enc.result, 'CKMPVCPVWPIWUJOGI');
+    // Reciprocal: applying again with the same key recovers the plaintext
+    assert.equal(Beaufort.decode(enc.result, 'FORTIFICATION', 'en', true).result, 'DEFENDTHEEASTWALL');
+    const dk = Beaufort.encode('Blåbær grød', 'NØKKEL', 'dk-no', true);
+    assert.equal(Beaufort.decode(dk.result, 'NØKKEL', 'dk-no', true).result, 'Blåbær grød');
+});
+
+test('Autokey: canonical value, round trip, and Scandinavian round trip', () => {
+    const enc = Autokey.encode('ATTACKATDAWN', 'QUEENLY', 'en', true);
+    assertShape(enc);
+    assert.equal(enc.result, 'QNXEPVYTWTWP');
+    assert.equal(Autokey.decode(enc.result, 'QUEENLY', 'en', true).result, 'ATTACKATDAWN');
+    const se = Autokey.encode('Höst på ön', 'NYCKEL', 'se', true);
+    assert.equal(Autokey.decode(se.result, 'NYCKEL', 'se', true).result, 'Höst på ön');
 });
 
 test('Affine: canonical known value (a=5, b=8) and round trip', () => {

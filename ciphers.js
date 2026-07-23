@@ -268,6 +268,105 @@ export const Vigenere = {
 };
 
 /**
+ * BEAUFORT & AUTOKEY (Vigenère family)
+ * Both cycle a keyword over the recognized letters of the chosen alphabet
+ * (`variant` → CAESAR_ALPHABETS; m = 26 English, 29 Scandinavian). Key
+ * characters not in the alphabet are ignored.
+ */
+function keyIndices(key, upper) {
+    return (key || '')
+        .toUpperCase()
+        .split('')
+        .filter((ch) => upper.indexOf(ch) !== -1)
+        .map((ch) => upper.indexOf(ch));
+}
+
+/**
+ * BEAUFORT — c = (k − p) mod m. It is reciprocal: applying it again with the
+ * same key recovers the plaintext, so encode and decode are one operation.
+ */
+function beaufortRun(text, key, variant, retainPunctuation, mode) {
+    const alphabet = CAESAR_ALPHABETS[variant] || CAESAR_ALPHABETS['en'];
+    const upper = alphabet.upper, lower = alphabet.lower, m = upper.length;
+    const ks = keyIndices(key, upper);
+    if (ks.length === 0) {
+        return { result: '', steps: [{ title: 'Error', content: 'Keyword is empty or has no letters from the chosen alphabet. Output cleared.' }] };
+    }
+    const steps = [{
+        title: 'Configuration',
+        content: `Mode: ${mode === 'encode' ? 'Encode' : 'Decode'} (Beaufort is reciprocal)\nAlphabet: ${alphabet.label}\nKeyword: ${(key || '').toUpperCase()}\nRetain Punctuation: ${retainPunctuation ? 'Yes' : 'No'}`
+    }];
+    let ki = 0;
+    const { result, letterSteps } = processChars(text, retainPunctuation, (char) => {
+        const iu = upper.indexOf(char), il = lower.indexOf(char);
+        if (iu === -1 && il === -1) return null;
+        const isUp = iu !== -1;
+        const p = isUp ? iu : il;
+        const kv = ks[ki % ks.length];
+        const c = ((kv - p) % m + m) % m;
+        const out = (isUp ? upper : lower)[c];
+        ki++;
+        return { char: out, step: `'${char}' (${p}) : Key ${kv} − ${p} = ${c} mod ${m} → '${out}'` };
+    });
+    steps.push({ title: 'Key Alignment & Shifts', content: summarizeSteps(letterSteps) });
+    return { result, steps };
+}
+
+export const Beaufort = {
+    encode(text, key, variant, retainPunctuation) {
+        return beaufortRun(text, key, variant, retainPunctuation, 'encode');
+    },
+    decode(text, key, variant, retainPunctuation) {
+        return beaufortRun(text, key, variant, retainPunctuation, 'decode');
+    }
+};
+
+/**
+ * AUTOKEY — the keystream is the keyword followed by the message itself, so
+ * the key never repeats. Encode adds the stream; decode subtracts it, feeding
+ * each recovered letter back into the stream.
+ */
+function autokeyRun(text, key, variant, retainPunctuation, direction) {
+    const alphabet = CAESAR_ALPHABETS[variant] || CAESAR_ALPHABETS['en'];
+    const upper = alphabet.upper, lower = alphabet.lower, m = upper.length;
+    const stream = keyIndices(key, upper); // seed; message indices get appended
+    if (stream.length === 0) {
+        return { result: '', steps: [{ title: 'Error', content: 'Keyword is empty or has no letters from the chosen alphabet. Output cleared.' }] };
+    }
+    const encoding = direction === 'encode';
+    const steps = [{
+        title: 'Configuration',
+        content: `Mode: ${encoding ? 'Encode' : 'Decode'}\nAlphabet: ${alphabet.label}\nKeyword: ${(key || '').toUpperCase()}\nKeystream: keyword + ${encoding ? 'plaintext' : 'recovered plaintext'}\nRetain Punctuation: ${retainPunctuation ? 'Yes' : 'No'}`
+    }];
+    let pos = 0;
+    const { result, letterSteps } = processChars(text, retainPunctuation, (char) => {
+        const iu = upper.indexOf(char), il = lower.indexOf(char);
+        if (iu === -1 && il === -1) return null;
+        const isUp = iu !== -1;
+        const inIdx = isUp ? iu : il;
+        const ksv = stream[pos];
+        pos++;
+        const outIdx = encoding ? (inIdx + ksv) % m : ((inIdx - ksv) % m + m) % m;
+        // The plaintext letter (input when encoding, output when decoding)
+        // extends the keystream.
+        stream.push(encoding ? inIdx : outIdx);
+        const out = (isUp ? upper : lower)[outIdx];
+        return { char: out, step: `'${char}' (${inIdx}) ${encoding ? '+' : '−'} keystream ${ksv} = ${outIdx} → '${out}'` };
+    });
+    steps.push({ title: 'Key Alignment & Shifts', content: summarizeSteps(letterSteps) });
+    return { result, steps };
+}
+
+export const Autokey = {
+    encode(text, key, variant, retainPunctuation) {
+        return autokeyRun(text, key, variant, retainPunctuation, 'encode');
+    },
+    decode(text, key, variant, retainPunctuation) {
+        return autokeyRun(text, key, variant, retainPunctuation, 'decode');
+    }
+};
+
+/**
  * AFFINE CIPHER
  * E(x) = (a·x + b) mod m, D(y) = a⁻¹·(y − b) mod m over the chosen alphabet
  * (m = 26 English, 29 for the Scandinavian variants). `a` must be coprime

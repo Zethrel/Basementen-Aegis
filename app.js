@@ -491,6 +491,17 @@ function bindEvents() {
     elements.polybiusVariant.addEventListener('change', () => runConversion());
     elements.baconVariant.addEventListener('change', () => runConversion());
 
+    // Beaufort / Autokey keyword (letters incl. Scandinavian) + alphabet
+    const letterKeyHandler = (e) => {
+        const filtered = e.target.value.replace(/[^A-Za-zÆØÅæøåÄÖäö]/g, '');
+        if (filtered !== e.target.value) e.target.value = filtered;
+        scheduleConversion();
+    };
+    elements.beaufortKey.addEventListener('input', letterKeyHandler);
+    elements.beaufortVariant.addEventListener('change', () => runConversion());
+    elements.autokeyKey.addEventListener('input', letterKeyHandler);
+    elements.autokeyVariant.addEventListener('change', () => runConversion());
+
     // Columnar keyword
     elements.columnarKey.addEventListener('input', () => scheduleConversion());
 

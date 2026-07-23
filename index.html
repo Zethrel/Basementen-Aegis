@@ -188,6 +188,42 @@
                             </div>
                         </div>
 
+                        <!-- Beaufort Keyword + Alphabet -->
+                        <div class="param-group" id="param-beaufort">
+                            <div class="param-subfield">
+                                <label for="beaufort-alphabet">Alphabet:</label>
+                                <select id="beaufort-alphabet" class="select-dropdown">
+                                    <option value="en">English (26 letters)</option>
+                                    <option value="dk-no">Danish & Norwegian (29)</option>
+                                    <option value="se">Swedish (29)</option>
+                                </select>
+                            </div>
+                            <label for="beaufort-key">Keyword:</label>
+                            <input type="text" id="beaufort-key" value="KEY" placeholder="Letters" maxlength="30" class="input-text">
+                            <div class="param-info">
+                                <p class="param-info-title"><i data-lucide="info"></i> Beaufort Guide</p>
+                                <p>A Vigenère relative using c = (key − plain) mod m. It's reciprocal — encoding twice with the same keyword returns the original, so Encode and Decode do the same thing.</p>
+                            </div>
+                        </div>
+
+                        <!-- Autokey Keyword + Alphabet -->
+                        <div class="param-group" id="param-autokey">
+                            <div class="param-subfield">
+                                <label for="autokey-alphabet">Alphabet:</label>
+                                <select id="autokey-alphabet" class="select-dropdown">
+                                    <option value="en">English (26 letters)</option>
+                                    <option value="dk-no">Danish & Norwegian (29)</option>
+                                    <option value="se">Swedish (29)</option>
+                                </select>
+                            </div>
+                            <label for="autokey-key">Keyword:</label>
+                            <input type="text" id="autokey-key" value="KEY" placeholder="Letters" maxlength="30" class="input-text">
+                            <div class="param-info">
+                                <p class="param-info-title"><i data-lucide="info"></i> Autokey Guide</p>
+                                <p>Like Vigenère, but the keystream is the keyword followed by the message itself, so the key never repeats — a stronger, classic improvement over plain Vigenère.</p>
+                            </div>
+                        </div>
+
                         <!-- Columnar Transposition Keyword -->
                         <div class="param-group" id="param-columnar">
                             <label for="columnar-key">Keyword:</label>
