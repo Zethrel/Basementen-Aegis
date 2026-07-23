@@ -503,6 +503,20 @@ function bindEvents() {
     elements.autokeyVariant.addEventListener('change', () => runConversion());
     elements.keywordSubKey.addEventListener('input', letterKeyHandler);
     elements.keywordSubVariant.addEventListener('change', () => runConversion());
+    // Four-Square / Bifid keywords (letters incl. Scandinavian) + alphabet
+    elements.foursquareKey1.addEventListener('input', letterKeyHandler);
+    elements.foursquareKey2.addEventListener('input', letterKeyHandler);
+    elements.foursquareVariant.addEventListener('change', () => runConversion());
+    elements.bifidKey.addEventListener('input', letterKeyHandler);
+    elements.bifidVariant.addEventListener('change', () => runConversion());
+
+    // Gronsfeld numeric key (digits only) + alphabet
+    elements.gronsfeldKey.addEventListener('input', (e) => {
+        const filtered = e.target.value.replace(/[^0-9]/g, '');
+        if (filtered !== e.target.value) e.target.value = filtered;
+        scheduleConversion();
+    });
+    elements.gronsfeldVariant.addEventListener('change', () => runConversion());
 
     // Columnar keyword
     elements.columnarKey.addEventListener('input', () => scheduleConversion());

@@ -7,10 +7,13 @@ import {
     Rot13,
     Atbash,
     Vigenere,
+    Gronsfeld,
     Beaufort,
     Autokey,
     KeywordSub,
     YoungerFuthark,
+    FourSquare,
+    Bifid,
     Affine,
     Playfair,
     Polybius,
@@ -206,6 +209,27 @@ export const CIPHERS = [
             : Polybius.decode(input, elements.polybiusVariant.value)
     },
     {
+        id: 'bifid', name: 'Bifid Cipher', shortName: 'Bifid', icon: 'grid-3x3', paramGroup: 'param-bifid',
+        run: (input, mode) => {
+            const keyword = elements.bifidKey.value;
+            const variant = elements.bifidVariant.value;
+            return mode === 'encode'
+                ? Bifid.encode(input, keyword, variant)
+                : Bifid.decode(input, keyword, variant);
+        }
+    },
+    {
+        id: 'foursquare', name: 'Four-Square Cipher', shortName: 'Four-Square', icon: 'grid-3x3', paramGroup: 'param-foursquare',
+        run: (input, mode) => {
+            const key1 = elements.foursquareKey1.value;
+            const key2 = elements.foursquareKey2.value;
+            const variant = elements.foursquareVariant.value;
+            return mode === 'encode'
+                ? FourSquare.encode(input, key1, key2, variant)
+                : FourSquare.decode(input, key1, key2, variant);
+        }
+    },
+    {
         id: 'railfence', name: 'Rail Fence', shortName: 'Rail Fence', icon: 'rows', paramGroup: 'param-railfence',
         run: (input, mode, opts) => {
             const rails = parseInt(elements.railfenceRails.value, 10);
@@ -232,6 +256,16 @@ export const CIPHERS = [
             return mode === 'encode'
                 ? Scytale.encode(input, cols)
                 : Scytale.decode(input, cols);
+        }
+    },
+    {
+        id: 'gronsfeld', name: 'Gronsfeld Cipher', shortName: 'Gronsfeld', icon: 'keyboard', paramGroup: 'param-gronsfeld',
+        run: (input, mode, opts) => {
+            const key = elements.gronsfeldKey.value;
+            const variant = elements.gronsfeldVariant.value;
+            return mode === 'encode'
+                ? Gronsfeld.encode(input, key, variant, opts.retainPunctuation)
+                : Gronsfeld.decode(input, key, variant, opts.retainPunctuation);
         }
     },
     {

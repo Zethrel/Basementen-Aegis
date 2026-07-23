@@ -268,6 +268,48 @@ export const Vigenere = {
 };
 
 /**
+ * GRONSFELD CIPHER
+ * A Vigenère variant keyed by a string of digits instead of a keyword: each
+ * digit 0-9 is the shift for its position, cycling over the recognized letters
+ * of the chosen alphabet (`variant` → CAESAR_ALPHABETS; m = 26 English, 29
+ * Scandinavian). Because every shift is 0-9, it is weaker than Vigenère but a
+ * neat bridge between Caesar and Vigenère.
+ */
+function gronsfeldRun(text, key, variant, retainPunctuation, direction) {
+    const digits = (key || '').replace(/[^0-9]/g, '');
+    if (!digits) {
+        return { result: '', steps: [{ title: 'Error', content: 'Key is empty or invalid. Enter a key of digits (0-9). Output cleared.' }] };
+    }
+    const alphabet = CAESAR_ALPHABETS[variant] || CAESAR_ALPHABETS['en'];
+    const upper = alphabet.upper, lower = alphabet.lower, size = upper.length;
+    const encoding = direction === 'encode';
+    const steps = [{
+        title: 'Configuration',
+        content: `Mode: ${encoding ? 'Encode' : 'Decode'}\nAlphabet: ${alphabet.label}\nNumeric Key: ${digits}\nRetain Punctuation: ${retainPunctuation ? 'Yes' : 'No'}`
+    }];
+
+    let keyIdx = 0;
+    const { result, letterSteps } = processChars(text, retainPunctuation, (char) => {
+        const alphabetStr = upper.indexOf(char) !== -1 ? upper : (lower.indexOf(char) !== -1 ? lower : null);
+        if (!alphabetStr) return null;
+        const index = alphabetStr.indexOf(char);
+        const shift = parseInt(digits[keyIdx % digits.length], 10);
+        const newIndex = encoding ? (index + shift) % size : (index - shift + size) % size;
+        const newChar = alphabetStr[newIndex];
+        keyIdx++; // advance the key only on recognized letters
+        return { char: newChar, step: `'${char}' (index ${index}) ${encoding ? '+' : '-'} digit ${shift} -> index ${newIndex} -> '${newChar}'` };
+    });
+
+    steps.push({ title: 'Key Alignment & Shifts', content: summarizeSteps(letterSteps) });
+    return { result, steps };
+}
+
+export const Gronsfeld = {
+    encode(text, key, variant, retainPunctuation) { return gronsfeldRun(text, key, variant, retainPunctuation, 'encode'); },
+    decode(text, key, variant, retainPunctuation) { return gronsfeldRun(text, key, variant, retainPunctuation, 'decode'); }
+};
+
+/**
  * BEAUFORT & AUTOKEY (Vigenère family)
  * Both cycle a keyword over the recognized letters of the chosen alphabet
  * (`variant` → CAESAR_ALPHABETS; m = 26 English, 29 Scandinavian). Key
@@ -603,6 +645,90 @@ export const Playfair = {
 };
 
 /**
+ * FOUR-SQUARE CIPHER
+ * A Playfair relative on four grids: two plaintext grids (top-left and
+ * bottom-right, the alphabet in order) and two keyword-scrambled cipher grids
+ * (top-right and bottom-left). Each plaintext pair is located in the two plain
+ * grids, then read off the two cipher grids at the crossed positions — so,
+ * unlike Playfair, doubled letters need no special handling. Shares Playfair's
+ * grid geometry (5×5 English with I/J merged; 4×7 for the 28-letter
+ * Scandinavian sets). An odd final letter is padded; non-letters are dropped.
+ */
+function evenDigraphs(text, base) {
+    let letters = '';
+    for (const raw of text.toUpperCase()) {
+        const c = raw === 'J' ? 'I' : raw;
+        if (base.indexOf(c) !== -1) letters += c;
+    }
+    const pad = base.indexOf('X') !== -1 ? 'X' : base[base.length - 1];
+    if (letters.length % 2 === 1) letters += pad;
+    const pairs = [];
+    for (let i = 0; i < letters.length; i += 2) pairs.push(letters.slice(i, i + 2));
+    return pairs;
+}
+
+function fourSquareRun(text, key1, key2, variant, direction) {
+    const { base, cols, rows } = playfairConfig(variant);
+    const plain = base;                       // ordered alphabet (both plain grids)
+    const g1 = playfairSquare(key1, base);    // top-right cipher grid
+    const g2 = playfairSquare(key2, base);    // bottom-left cipher grid
+    const encoding = direction === 'encode';
+
+    const gridPair = (left, right) => {
+        const lines = [];
+        for (let r = 0; r < rows; r++) {
+            const l = left.slice(r * cols, r * cols + cols).split('').join(' ');
+            const rr = right.slice(r * cols, r * cols + cols).split('').join(' ');
+            lines.push(`${l}    ${rr}`);
+        }
+        return lines.join('\n');
+    };
+    const steps = [{
+        title: `Four Squares (${encoding ? 'Encode' : 'Decode'})`,
+        content: `Keywords: ${key1 || '(none)'} / ${key2 || '(none)'}\nI and J share a cell.\n\n${gridPair(plain, g1)}\n\n${gridPair(g2, plain)}`
+    }];
+
+    const pairs = evenDigraphs(encoding ? text : text.replace(/\s+/g, ''), base);
+    if (pairs.length === 0) return { result: '', steps };
+
+    const details = [];
+    let result = '';
+    for (const pair of pairs) {
+        let o1, o2;
+        if (encoding) {
+            const i1 = plain.indexOf(pair[0]);
+            const i2 = plain.indexOf(pair[1]);
+            const r1 = Math.floor(i1 / cols), c1 = i1 % cols;
+            const r2 = Math.floor(i2 / cols), c2 = i2 % cols;
+            o1 = g1[r1 * cols + c2];
+            o2 = g2[r2 * cols + c1];
+        } else {
+            const i1 = g1.indexOf(pair[0]);
+            const i2 = g2.indexOf(pair[1]);
+            const r1 = Math.floor(i1 / cols), c2 = i1 % cols;
+            const r2 = Math.floor(i2 / cols), c1 = i2 % cols;
+            o1 = plain[r1 * cols + c1];
+            o2 = plain[r2 * cols + c2];
+        }
+        result += o1 + o2;
+        details.push(`${pair} → ${o1}${o2}`);
+    }
+
+    steps.push({ title: 'Digraph Substitution', content: summarizeSteps(details) });
+    const grouped = result.match(/.{1,2}/g)?.join(' ') || result;
+    return { result: grouped, steps };
+}
+
+export const FourSquare = {
+    encode(text, key1, key2, variant) {
+        return fourSquareRun(text, key1, key2, variant, 'encode');
+    },
+    decode(text, key1, key2, variant) {
+        return fourSquareRun(text, key1, key2, variant, 'decode');
+    }
+};
+
+/**
  * POLYBIUS SQUARE
  * Each letter → its row+column on a grid, five columns wide. English uses the
  * classic 5×5 (I/J share cell 24); the Scandinavian variants keep all 29
@@ -686,6 +812,97 @@ export const Polybius = {
         }
         steps.push({ title: 'Code Translation', content: summarizeSteps(details) });
         return { result, steps };
+    }
+};
+
+/**
+ * BIFID CIPHER
+ * Delastelle's fractionation cipher: each letter is turned into its (row,
+ * column) on a keyword-seeded Polybius square, the rows and columns are written
+ * out in two long lines, then read back off in pairs to form the ciphertext.
+ * Because a letter's two coordinates end up in different output letters, Bifid
+ * diffuses each character across the message — a genuinely different idea from
+ * plain substitution. Reuses the Polybius geometry (5×5 English with I/J
+ * merged; 6×5 for the 29-letter Scandinavian sets). Lossless for letters;
+ * non-letters are dropped.
+ */
+function bifidSquare(keyword, seq) {
+    const foldsJ = seq.indexOf('J') === -1;
+    const seen = new Set();
+    let out = '';
+    for (const raw of ((keyword || '') + seq).toUpperCase()) {
+        const c = foldsJ && raw === 'J' ? 'I' : raw;
+        if (seq.indexOf(c) !== -1 && !seen.has(c)) { seen.add(c); out += c; }
+    }
+    return out; // a permutation of `seq`
+}
+
+function bifidRun(text, keyword, variant, direction) {
+    const seq = polybiusSequence(variant);
+    const square = bifidSquare(keyword, seq);
+    const foldsJ = seq.indexOf('J') === -1;
+    const cols = 5;
+    const rowsN = Math.ceil(square.length / cols);
+    const encoding = direction === 'encode';
+
+    const gridLines = ['    ' + Array.from({ length: cols }, (_, c) => c + 1).join(' ')];
+    for (let r = 0; r < rowsN; r++) gridLines.push(`${r + 1} | ` + square.slice(r * cols, r * cols + cols).split('').join(' '));
+    const steps = [{
+        title: `Key Square (${encoding ? 'Encode' : 'Decode'})`,
+        content: `Keyword: ${keyword || '(none)'}\n${foldsJ ? 'I and J share a cell.\n' : ''}\n${gridLines.join('\n')}`
+    }];
+
+    // Gather recognized letters (uppercased, J folded to I where applicable).
+    let letters = '';
+    for (const raw of text.toUpperCase()) {
+        const c = foldsJ && raw === 'J' ? 'I' : raw;
+        if (square.indexOf(c) !== -1) letters += c;
+    }
+    if (letters.length === 0) return { result: '', steps };
+
+    const rowsArr = [], colsArr = [];
+    for (const ch of letters) {
+        const idx = square.indexOf(ch);
+        rowsArr.push(Math.floor(idx / cols) + 1);
+        colsArr.push(idx % cols + 1);
+    }
+
+    let result = '';
+    const details = [];
+    if (encoding) {
+        // Read rows then columns as one stream, then re-pair (row, col) per letter.
+        const stream = rowsArr.concat(colsArr);
+        for (let i = 0; i < stream.length; i += 2) {
+            const r = stream[i], c = stream[i + 1];
+            const letter = square[(r - 1) * cols + (c - 1)];
+            result += letter;
+            details.push(`(${r},${c}) → '${letter}'`);
+        }
+        steps.push({ title: 'Coordinate Rows', content: `Rows:    ${rowsArr.join(' ')}\nColumns: ${colsArr.join(' ')}` });
+    } else {
+        // Cipher coordinates, read in order, split back into rows then columns.
+        const stream = [];
+        for (let i = 0; i < letters.length; i++) { stream.push(rowsArr[i], colsArr[i]); }
+        const half = stream.length / 2;
+        const origRows = stream.slice(0, half);
+        const origCols = stream.slice(half);
+        for (let i = 0; i < half; i++) {
+            const letter = square[(origRows[i] - 1) * cols + (origCols[i] - 1)];
+            result += letter;
+            details.push(`(${origRows[i]},${origCols[i]}) → '${letter}'`);
+        }
+    }
+
+    steps.push({ title: encoding ? 'Re-paired Coordinates' : 'Recovered Letters', content: summarizeSteps(details) });
+    return { result, steps };
+}
+
+export const Bifid = {
+    encode(text, keyword, variant) {
+        return bifidRun(text, keyword, variant, 'encode');
+    },
+    decode(text, keyword, variant) {
+        return bifidRun(text.replace(/\s+/g, ''), keyword, variant, 'decode');
     }
 };
 

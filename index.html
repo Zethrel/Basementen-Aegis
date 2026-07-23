@@ -108,6 +108,24 @@
                             <span class="param-error" id="vigenere-error" role="alert"></span>
                         </div>
 
+                        <!-- Gronsfeld numeric key + Alphabet -->
+                        <div class="param-group" id="param-gronsfeld">
+                            <div class="param-subfield">
+                                <label for="gronsfeld-alphabet">Alphabet:</label>
+                                <select id="gronsfeld-alphabet" class="select-dropdown">
+                                    <option value="en">English (26 letters)</option>
+                                    <option value="dk-no">Danish & Norwegian (29)</option>
+                                    <option value="se">Swedish (29)</option>
+                                </select>
+                            </div>
+                            <label for="gronsfeld-key">Numeric key:</label>
+                            <input type="text" id="gronsfeld-key" value="31415" placeholder="Digits 0-9" maxlength="30" class="input-text" inputmode="numeric">
+                            <div class="param-info">
+                                <p class="param-info-title"><i data-lucide="info"></i> Gronsfeld Guide</p>
+                                <p>A Vigenère variant keyed by digits: each digit 0–9 is the shift for its position, cycling over the message. It sits between Caesar (one shift) and Vigenère (a keyword of shifts).</p>
+                            </div>
+                        </div>
+
                         <!-- Affine a & b -->
                         <div class="param-group" id="param-affine">
                             <div class="param-subfield">
@@ -153,6 +171,44 @@
                             <div class="param-info">
                                 <p class="param-info-title"><i data-lucide="info"></i> Playfair Guide</p>
                                 <p>A keyword grid encrypts letter pairs (I and J share a cell). Doubled letters are split and an odd final letter is padded with X, so non-letters are dropped and decoded text keeps that padding. The Scandinavian variants use a 4×7 grid to fit their extra letters.</p>
+                            </div>
+                        </div>
+
+                        <!-- Four-Square two keywords + Alphabet -->
+                        <div class="param-group" id="param-foursquare">
+                            <div class="param-subfield">
+                                <label for="foursquare-alphabet">Alphabet:</label>
+                                <select id="foursquare-alphabet" class="select-dropdown">
+                                    <option value="en">English (5×5 grid)</option>
+                                    <option value="dk-no">Danish & Norwegian (4×7, +Æ Ø Å)</option>
+                                    <option value="se">Swedish (4×7, +Å Ä Ö)</option>
+                                </select>
+                            </div>
+                            <label for="foursquare-key1">Keyword 1 (top-right grid):</label>
+                            <input type="text" id="foursquare-key1" value="EXAMPLE" placeholder="Letters only" maxlength="30" class="input-text">
+                            <label for="foursquare-key2">Keyword 2 (bottom-left grid):</label>
+                            <input type="text" id="foursquare-key2" value="KEYWORD" placeholder="Letters only" maxlength="30" class="input-text">
+                            <div class="param-info">
+                                <p class="param-info-title"><i data-lucide="info"></i> Four-Square Guide</p>
+                                <p>A Playfair relative using two plaintext grids and two keyword grids. Letter pairs are located in the plain grids and read off the keyword grids — so, unlike Playfair, doubled letters need no splitting. I and J share a cell; an odd final letter is padded.</p>
+                            </div>
+                        </div>
+
+                        <!-- Bifid keyword + Alphabet -->
+                        <div class="param-group" id="param-bifid">
+                            <div class="param-subfield">
+                                <label for="bifid-alphabet">Alphabet:</label>
+                                <select id="bifid-alphabet" class="select-dropdown">
+                                    <option value="en">English (5×5 grid)</option>
+                                    <option value="dk-no">Danish & Norwegian (6×5, +Æ Ø Å)</option>
+                                    <option value="se">Swedish (6×5, +Å Ä Ö)</option>
+                                </select>
+                            </div>
+                            <label for="bifid-key">Keyword:</label>
+                            <input type="text" id="bifid-key" value="KEYWORD" placeholder="Letters only" maxlength="30" class="input-text">
+                            <div class="param-info">
+                                <p class="param-info-title"><i data-lucide="info"></i> Bifid Guide</p>
+                                <p>Each letter becomes its row and column on a keyword grid; all the rows are written out, then all the columns, and the stream is read back in pairs. This spreads every letter across the message (fractionation). English merges I/J on a 5×5 grid; the Scandinavian sets use a 6×5 grid.</p>
                             </div>
                         </div>
 

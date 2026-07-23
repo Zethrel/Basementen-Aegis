@@ -14,10 +14,13 @@ import {
     Rot13,
     Atbash,
     Vigenere,
+    Gronsfeld,
     Beaufort,
     Autokey,
     KeywordSub,
     YoungerFuthark,
+    FourSquare,
+    Bifid,
     Affine,
     affineCoprimes,
     Playfair,
@@ -140,6 +143,41 @@ test('Younger Futhark: 16-rune transliteration (lossy by design)', () => {
     assert.equal(YoungerFuthark.encode('y', null, true).result, 'ᛦ');
     // TH is a single rune
     assert.equal(YoungerFuthark.encode('thor', null, true).result, 'ᚦᚢᚱ');
+});
+
+test('Gronsfeld: numeric-key Vigenère, canonical value and round trips', () => {
+    // Digit key acts as per-position Caesar shifts: A+3=D, B+1=C, C+4=G, D+1=E, E+5=J
+    const enc = Gronsfeld.encode('ABCDE', '31415', 'en', true);
+    assertShape(enc);
+    assert.equal(enc.result, 'DCGEJ');
+    assert.equal(Gronsfeld.decode(enc.result, '31415', 'en', true).result, 'ABCDE');
+    assert.equal(Gronsfeld.decode(Gronsfeld.encode('Hello, World!', '271', 'en', true).result,
+        '271', 'en', true).result, 'Hello, World!');
+    assert.equal(Gronsfeld.decode(Gronsfeld.encode('Blåbær grød', '4092', 'dk-no', true).result,
+        '4092', 'dk-no', true).result, 'Blåbær grød');
+    // Empty / non-digit key clears output rather than leaking plaintext
+    assert.equal(Gronsfeld.encode('SECRET', 'abc', 'en', true).result, '');
+});
+
+test('Four-Square: canonical value (EXAMPLE / KEYWORD) and round trips', () => {
+    const enc = FourSquare.encode('help me', 'EXAMPLE', 'KEYWORD', 'en');
+    assertShape(enc);
+    assert.equal(enc.result.replace(/\s+/g, ''), 'FYNFNE');
+    assert.equal(FourSquare.decode(enc.result, 'EXAMPLE', 'KEYWORD', 'en').result.replace(/\s+/g, ''), 'HELPME');
+    // Scandinavian 4×7 grid round trips (letters only, uppercased)
+    const dk = FourSquare.encode('Blåbær', 'NØKKEL', 'FISK', 'dk-no');
+    assert.equal(FourSquare.decode(dk.result, 'NØKKEL', 'FISK', 'dk-no').result.replace(/\s+/g, ''), 'BLÅBÆR');
+});
+
+test('Bifid: fractionation round trips (English and Scandinavian)', () => {
+    const enc = Bifid.encode('FLEEATONCE', 'KEYWORD', 'en');
+    assertShape(enc);
+    assert.equal(Bifid.decode(enc.result, 'KEYWORD', 'en').result, 'FLEEATONCE');
+    // I/J fold: J is encoded as I, so decode recovers I
+    assert.equal(Bifid.decode(Bifid.encode('JUMP', 'KEY', 'en').result, 'KEY', 'en').result, 'IUMP');
+    // Scandinavian 6×5 grid keeps all 29 letters distinct
+    const dk = Bifid.encode('BLÅBÆRGRØD', 'NØKKEL', 'dk-no');
+    assert.equal(Bifid.decode(dk.result, 'NØKKEL', 'dk-no').result, 'BLÅBÆRGRØD');
 });
 
 test('Beaufort: canonical value, reciprocity, and Scandinavian round trip', () => {
