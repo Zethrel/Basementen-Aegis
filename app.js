@@ -1,8 +1,8 @@
 /**
  * Basementen Aegis - App Controller
- * Entry module: wires the cipher registry, state, vault, and history
- * modules to the page — initialization, conversion dispatch, the process
- * panel, and all cipher-agnostic event handlers.
+ * Entry module: wires the cipher registry, state, and UI to the page —
+ * initialization, conversion dispatch, the process panel, and all
+ * cipher-agnostic event handlers.
  */
 
 import { APP_VERSION } from './version.js';
@@ -11,17 +11,13 @@ import { elements } from './dom.js';
 import { state, loadSavedState, saveConfigState } from './state.js';
 import { getCipher, renderCipherNav } from './registry.js';
 import { openModal, closeModal, registerModal, showToast } from './ui.js';
-import {
-    vaultSession, lockBasementenSession, handleBasementenAccess, bindVaultEvents,
-    saveToHistory, triggerHistoryAutoSave
-} from './vault.js';
 
 // Global PWA Install prompt pointer
 let deferredPrompt = null;
 
 /* --------------------------------------------------------------------------
    Last-resort error net. Local try/catch covers the conversion dispatch and
-   every vault flow; this catches anything that escapes (event handlers,
+   the conversion dispatch; this catches anything that escapes (event handlers,
    future bugs) so a fault surfaces as a toast instead of a silent dead UI.
    Toasts are throttled; the console always gets the full error.
    -------------------------------------------------------------------------- */
@@ -190,62 +186,6 @@ export function setupUIFromState() {
         elements.outputPanelTitle.textContent = titleEntry.ioLabels.output;
     }
 
-    // Handle Basementen Encode mode panel visibility override
-    const outputPanel = elements.textOutput.closest('.console-panel');
-    const inputPanel = elements.textInput.closest('.console-panel');
-    
-    if (state.cipher === 'basementen') {
-        if (state.mode === 'encode') {
-            outputPanel.classList.add('hidden');
-            inputPanel.classList.remove('hidden');
-            elements.basementenCopyOutput.classList.remove('hidden');
-            
-            elements.basementenTxLabel.textContent = "Transaction Password (cannot be master password):";
-            elements.basementenTxPassword.placeholder = "Set password to secure this transaction";
-            elements.basementenNameGroup.classList.remove('hidden');
-            elements.basementenSaveTx.classList.remove('hidden');
-            elements.basementenGenKey.classList.remove('hidden');
-            elements.basementenViewLog.classList.remove('hidden');
-            elements.basementenResetPwd.classList.remove('hidden');
-            
-            if (vaultSession.txValid) {
-                elements.textInput.disabled = false;
-                elements.textInput.placeholder = "Type or paste your text here...";
-            } else {
-                elements.textInput.disabled = true;
-                elements.textInput.value = '';
-                elements.textInput.placeholder = "Please enter a unique Transaction Password in the control panel to unlock composition...";
-            }
-        } else {
-            outputPanel.classList.remove('hidden');
-            inputPanel.classList.remove('hidden');
-            elements.basementenCopyOutput.classList.add('hidden');
-            
-            elements.basementenTxLabel.textContent = "Decryption Password:";
-            elements.basementenTxPassword.placeholder = "Enter password to decrypt";
-            elements.basementenNameGroup.classList.add('hidden');
-            elements.basementenSaveTx.classList.add('hidden');
-            elements.basementenGenKey.classList.add('hidden');
-            elements.basementenViewLog.classList.add('hidden');
-            elements.basementenResetPwd.classList.add('hidden');
-            
-            if (vaultSession.decryptedKey !== null) {
-                elements.textInput.disabled = false;
-                elements.textInput.placeholder = "Enter ciphertext to decrypt...";
-            } else {
-                elements.textInput.disabled = true;
-                elements.textInput.value = '';
-                elements.textInput.placeholder = "Please enter the Decryption Password in the control panel to load the key...";
-            }
-        }
-    } else {
-        outputPanel.classList.remove('hidden');
-        inputPanel.classList.remove('hidden');
-        elements.basementenCopyOutput.classList.add('hidden');
-        elements.textInput.disabled = false;
-        elements.textInput.placeholder = "Type or paste your text here...";
-    }
-
     // Set Toggles
     elements.optPunctuation.checked = state.retainPunctuation;
     elements.optCarryText.checked = state.carryText;
@@ -312,19 +252,16 @@ function showActiveParameterGroup() {
  * produced becomes the input Decode operates on, and vice versa — so
  * switching modes round-trips the message instead of decoding plaintext
  * into gibberish. Skipped when there's nothing meaningful to carry over:
- * empty or status/error outputs, The Basementen (its fields are
- * password-gated and cleared per mode by design), and modeless helpers.
+ * empty or status/error outputs, and modeless helpers.
  */
 function swapIOForModeChange() {
-    if (state.cipher === 'basementen') return;
     const entry = getCipher(state.cipher);
     if (entry && entry.modeless) return;
 
     const output = elements.textOutput.value;
     if (!output) return;
     if (output.startsWith('Error executing conversion') ||
-        output.startsWith('[') ||
-        output.startsWith('LOCKED:')) return;
+        output.startsWith('[')) return;
 
     elements.textInput.value = output;
     // Some outputs are larger than their input (e.g. Binary Converter is
@@ -338,22 +275,10 @@ function swapIOForModeChange() {
  */
 function bindEvents() {
     // Cipher Select Buttons
-    // Start from the loaded cipher (not a hardcoded default) so cancelling the
-    // very first Basementen unlock returns to where the user actually was.
-    let previousCipher = state.cipher !== 'basementen' ? state.cipher : 'caesar';
     elements.cipherBtns.forEach(btn => {
         btn.addEventListener('click', () => {
             const selectedCipher = btn.dataset.cipher;
             if (selectedCipher === state.cipher) return;
-
-            if (state.cipher !== 'basementen') {
-                previousCipher = state.cipher;
-            }
-
-            // Click away from basementen: lock it immediately and clear in-memory key
-            if (state.cipher === 'basementen' && selectedCipher !== 'basementen') {
-                lockBasementenSession();
-            }
 
             // Fresh slate per cipher unless the user opted into carrying
             // their text over (the "Carry Text" toggle)
@@ -365,14 +290,9 @@ function bindEvents() {
             }
 
             state.cipher = selectedCipher;
-
-            if (selectedCipher === 'basementen') {
-                handleBasementenAccess(previousCipher);
-            } else {
-                saveConfigState();
-                setupUIFromState();
-                runConversion();
-            }
+            saveConfigState();
+            setupUIFromState();
+            runConversion();
         });
     });
 
@@ -532,7 +452,6 @@ function bindEvents() {
         } else {
             scheduleConversion();
         }
-        triggerHistoryAutoSave();
     });
 
     elements.textOutput.addEventListener('input', () => {
@@ -554,7 +473,6 @@ function bindEvents() {
             enforceInputLimits();
             elements.inputStats.textContent = `${elements.textInput.value.length} characters`;
             runConversion();
-            triggerHistoryAutoSave();
         } catch (err) {
             // Fallback if permission denied
             showToast('Clipboard access was blocked — paste with Ctrl+V or Cmd+V instead.', 'warning');
@@ -585,10 +503,6 @@ function bindEvents() {
         navigator.clipboard.writeText(text).then(() => {
             // Transient UI feedback
             setCopyBtnIcon('check');
-
-            // Add immediately to history when they explicitly copy (as they finished working with it)
-            saveToHistory(elements.textInput.value, text);
-
             setTimeout(() => setCopyBtnIcon('copy'), 1500);
         });
     });
@@ -644,12 +558,8 @@ function bindEvents() {
 
     // Escape / overlay-click dismissal for every modal. Registration order
     // matters for stacking: modals registered later win the Escape key while
-    // visible. The Basementen listeners + its modal registrations live in
-    // vault.js; bound here so those modals register between mobile and
-    // confirm, preserving the stacking order.
+    // visible, so the confirm dialog registers last (it can stack on top).
     registerModal(elements.mobileModal, () => closeModal(elements.mobileModal));
-    bindVaultEvents();
-    // Registered last: the confirm dialog can stack on top of any other modal.
     registerModal(elements.confirmModal, () => elements.confirmModalCancel.click());
 
     // Online/Offline Listeners
@@ -677,18 +587,16 @@ function updateNetworkStatus() {
 }
 
 /**
- * Execute Cryptographic Conversion
- * (async because The Basementen encrypts via WebCrypto; other ciphers are sync)
+ * Execute the cipher conversion for the current cipher and mode.
  */
-// Monotonic run id: async ciphers (The Basementen) can resolve out of order
-// under fast typing, so stale results must never overwrite newer ones.
+// Monotonic run id: guards against out-of-order async results (a cipher's
+// run may be async) overwriting newer ones under fast typing.
 let conversionRunId = 0;
 
 /* --------------------------------------------------------------------------
    Input size guardrails. The process panel renders one step line per
    character, so unbounded pastes mean multi-megabyte DOM text and a frozen
    tab. Past the soft limit we warn once; past the hard limit we truncate.
-   Vault/password fields are separate inputs and are never limited.
    -------------------------------------------------------------------------- */
 const INPUT_SOFT_LIMIT = 10000;
 const INPUT_HARD_LIMIT = 50000;
@@ -807,18 +715,7 @@ export async function runConversion() {
  */
 function renderProcessSteps(steps) {
     elements.processLog.innerHTML = '';
-    
-    if (state.cipher === 'basementen') {
-        elements.processLog.innerHTML = `
-            <div class="placeholder-log" style="color: #ef4444; border-color: rgba(239, 68, 68, 0.2); background: rgba(239, 68, 68, 0.05); padding: 20px; border-radius: var(--radius-md); border: 1px solid; display: flex; flex-direction: column; align-items: center; gap: 8px;">
-                <i data-lucide="shield-alert" class="animate-pulse" style="width: 24px; height: 24px;"></i>
-                <p style="margin: 0; font-weight: 600;">Process breakdown is disabled for The Basementen to prevent key leakage.</p>
-            </div>
-        `;
-        if (window.lucide) window.lucide.createIcons();
-        return;
-    }
-    
+
     if (steps.length === 0) {
         renderProcessPlaceholder();
         return;
@@ -902,9 +799,4 @@ function scrambleInputToOutput() {
 // Start the app
 document.addEventListener('DOMContentLoaded', () => {
     init();
-    
-    // Auto-prompt if basementen was the saved active cipher on startup
-    if (state.cipher === 'basementen') {
-        handleBasementenAccess('caesar');
-    }
 });

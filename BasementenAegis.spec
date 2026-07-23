@@ -12,7 +12,6 @@ datas = [
     ('state.js', '.'),
     ('ui.js', '.'),
     ('registry.js', '.'),
-    ('vault.js', '.'),
     ('ciphers.js', '.'),
     ('sw.js', '.'),
     ('logo.png', '.'),
@@ -21,8 +20,6 @@ datas = [
     ('manifest.json', '.'),
     ('lucide.min.js', '.'),
     ('qrcode.js', '.'),
-    ('argon2-bundled.min.js', '.'),
-    ('argon2-worker.js', '.'),
     ('fonts', 'fonts'),
 ]
 

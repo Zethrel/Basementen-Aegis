@@ -1,6 +1,6 @@
 # Basementen Aegis
 
-An offline-first cipher encoder/decoder with step-by-step process visualization. Runs as a static web page, an installable PWA, or a native desktop app — no data ever leaves your machine.
+An offline-first, educational cipher encoder/decoder with step-by-step process visualization. Runs as a static web page, an installable PWA, or a native desktop app — everything runs locally, no data ever leaves your machine.
 
 Created by Zethrel.
 
@@ -14,21 +14,15 @@ Created by Zethrel.
 
 ## Classic Ciphers & Encoding Tools
 
-> **Important:** Except for The Basementen, every cipher in this application is included for learning, puzzles, and fun between friends. They are not secure encryption and should never be relied on to protect sensitive information.
+> **Important:** Every cipher in this application is included for learning, puzzles, and fun between friends. They are classic and historical ciphers — not secure encryption — and should never be relied on to protect sensitive information.
 
 Caesar (English or Danish/Norwegian/Swedish alphabets) · ROT13 · Atbash · Vigenère · Rail Fence · Binary Converter · A1Z26 (English or Scandinavian alphabets) · Binary Reverse (custom) · Elder Futhark runes · Morse code (with Æ/Ø/Å) · Anagram Helper · Caesar Brute Force helper (cracks unknown shifts, English or Scandinavian alphabets)
-
-## Secure Vault
-
-**The Basementen** — a password-protected encrypted vault. Messages are encrypted with AES-256-GCM (ciphertext format `SB1:<base64>`), and the vault's keys and transaction history are also AES-256-GCM encrypted at rest with keys derived from your passwords via Argon2id (memory-hard, 64 MiB).
-
-**Threat model:** The Basementen is designed to protect stored messages against someone who gains access to your files without knowing your password. It does not protect against malware running on your computer or someone who knows your password.
 
 ## Features
 
 - Step-by-step breakdown of every encode/decode operation
 - Fully offline — fonts, icons, and QR generation are all bundled locally, nothing is fetched over the network
-- Encrypted transaction log for The Basementen vault (nothing else is persisted)
+- Nothing is persisted beyond your interface preferences; no message text is stored
 - Installable as a PWA, or run as a standalone desktop app
 
 ## Running it

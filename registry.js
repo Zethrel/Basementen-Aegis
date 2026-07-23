@@ -13,11 +13,9 @@ import {
     BinaryReverse,
     Futhark,
     Morse,
-    CaesarBruteForce,
-    Basementen
+    CaesarBruteForce
 } from './ciphers.js';
 import { elements } from './dom.js';
-import { vaultSession } from './vault.js';
 
 /* ==========================================================================
    CIPHER REGISTRY
@@ -137,25 +135,6 @@ export const CIPHERS = [
         run: (input, mode, opts) => mode === 'encode'
             ? Rot13.encode(input, null, opts.retainPunctuation)
             : Rot13.decode(input, null, opts.retainPunctuation)
-    },
-    {
-        id: 'basementen', name: 'The Basementen', shortName: 'The Basementen', icon: 'shield-alert',
-        badge: { text: 'Secure', className: 'badge-secure' }, paramGroup: 'param-basementen',
-        run: async (input, mode) => {
-            if (!vaultSession.unlocked) {
-                return { result: "LOCKED: Please enter master password", steps: [] };
-            }
-            if (mode === 'decode') {
-                if (vaultSession.decryptedKey !== null) {
-                    return Basementen.decode(input, vaultSession.decryptedKey);
-                }
-                return { result: "[LOCKED: Enter Transaction Password in the control panel to load key]", steps: [] };
-            }
-            if (vaultSession.txValid) {
-                return Basementen.encode(input, vaultSession.key);
-            }
-            return { result: "[LOCKED: Set Transaction Password in the control panel to unlock composition]", steps: [] };
-        }
     },
     {
         id: 'vigenere', name: 'Vigenere Cipher', shortName: 'Vigenere', icon: 'keyboard', paramGroup: 'param-vigenere',
