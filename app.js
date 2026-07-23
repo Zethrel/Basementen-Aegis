@@ -436,6 +436,24 @@ function bindEvents() {
         scheduleConversion();
     });
 
+    // Affine multiplier + shift
+    elements.affineA.addEventListener('change', () => runConversion());
+    elements.affineB.addEventListener('input', (e) => {
+        elements.affineBValue.textContent = e.target.value;
+        scheduleConversion(50);
+    });
+    elements.affineBDown.addEventListener('click', () => nudgeSlider(elements.affineB, -1));
+    elements.affineBUp.addEventListener('click', () => nudgeSlider(elements.affineB, 1));
+
+    // Playfair keyword (letters only)
+    elements.playfairKey.addEventListener('input', (e) => {
+        const filtered = e.target.value.replace(/[^A-Za-z]/g, '');
+        if (filtered !== e.target.value) {
+            e.target.value = filtered;
+        }
+        scheduleConversion();
+    });
+
     // Rail Fence Rails input
     elements.railfenceRails.addEventListener('input', () => {
         scheduleConversion();

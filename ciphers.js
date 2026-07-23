@@ -268,6 +268,285 @@ export const Vigenere = {
 };
 
 /**
+ * AFFINE CIPHER
+ * E(x) = (a·x + b) mod 26, D(y) = a⁻¹·(y − b) mod 26. `a` must be coprime
+ * with 26 (the UI restricts the choices); Caesar is the special case a = 1.
+ */
+const AFFINE_M = 26;
+
+function modInverse(a, m) {
+    a = ((a % m) + m) % m;
+    for (let x = 1; x < m; x++) {
+        if ((a * x) % m === 1) return x;
+    }
+    return null; // a not coprime with m — no inverse
+}
+
+function affineRun(text, a, b, retainPunctuation, direction) {
+    a = parseInt(a, 10);
+    b = ((parseInt(b, 10) || 0) % AFFINE_M + AFFINE_M) % AFFINE_M;
+    const aInv = modInverse(a, AFFINE_M);
+    if (aInv === null) {
+        return { result: '', steps: [{ title: 'Error', content: `'a' (${a}) must be coprime with 26. Valid values: 1, 3, 5, 7, 9, 11, 15, 17, 19, 21, 23, 25.` }] };
+    }
+
+    const encoding = direction === 'encode';
+    const steps = [{
+        title: 'Configuration',
+        content: `Mode: ${encoding ? 'Encode' : 'Decode'}\nFormula: ${encoding ? `E(x) = (${a}·x + ${b}) mod 26` : `D(y) = ${aInv}·(y − ${b}) mod 26   (${a}⁻¹ mod 26 = ${aInv})`}\nRetain Punctuation: ${retainPunctuation ? 'Yes' : 'No'}`
+    }];
+
+    const { result, letterSteps } = processChars(text, retainPunctuation, (char) => {
+        if (!isLetter(char)) return null;
+        const upper = isUpper(char);
+        const x = getAlphabetIndex(char);
+        const y = encoding
+            ? (a * x + b) % AFFINE_M
+            : (aInv * ((x - b) % AFFINE_M + AFFINE_M)) % AFFINE_M;
+        const outChar = getLetterFromIndex(y, upper);
+        return { char: outChar, step: `'${char}' (${x}) → ${encoding ? `(${a}·${x}+${b})` : `${aInv}·(${x}−${b})`} mod 26 = ${y} → '${outChar}'` };
+    });
+
+    steps.push({ title: 'Character Processing', content: summarizeSteps(letterSteps) });
+    return { result, steps };
+}
+
+export const Affine = {
+    encode(text, a, b, retainPunctuation) {
+        return affineRun(text, a, b, retainPunctuation, 'encode');
+    },
+    decode(text, a, b, retainPunctuation) {
+        return affineRun(text, a, b, retainPunctuation, 'decode');
+    }
+};
+
+/**
+ * PLAYFAIR CIPHER
+ * Digraph substitution on a 5×5 keyword square (I/J share a cell). Letters
+ * are paired up; doubled letters are split with X and an odd final letter is
+ * padded with X. Same row → shift right; same column → shift down; otherwise
+ * swap columns (decode shifts the opposite way). Non-letters are dropped, so
+ * decode is not a perfect round trip of spacing/padding — this is expected.
+ */
+function playfairSquare(keyword) {
+    const seen = new Set();
+    let square = '';
+    // Keyword letters first (J folded into I), then the rest of the alphabet.
+    for (const raw of ((keyword || '') + 'ABCDEFGHIKLMNOPQRSTUVWXYZ').toUpperCase()) {
+        const c = raw === 'J' ? 'I' : raw;
+        if (c >= 'A' && c <= 'Z' && !seen.has(c)) {
+            seen.add(c);
+            square += c;
+        }
+    }
+    return square; // 25 characters, no J
+}
+
+function playfairDigraphs(text) {
+    const letters = text.toUpperCase().replace(/[^A-Z]/g, '').replace(/J/g, 'I');
+    const pairs = [];
+    let i = 0;
+    while (i < letters.length) {
+        const a = letters[i];
+        let b = letters[i + 1];
+        if (!b) {
+            pairs.push(a + 'X');
+            i += 1;
+        } else if (a === b) {
+            pairs.push(a + 'X');
+            i += 1;
+        } else {
+            pairs.push(a + b);
+            i += 2;
+        }
+    }
+    return pairs;
+}
+
+function playfairRun(text, keyword, direction) {
+    const square = playfairSquare(keyword);
+    const pos = (ch) => {
+        const idx = square.indexOf(ch);
+        return [Math.floor(idx / 5), idx % 5];
+    };
+    const shift = direction === 'encode' ? 1 : 4; // +1 encode, −1 (≡ +4 mod 5) decode
+
+    const gridLines = [];
+    for (let r = 0; r < 5; r++) gridLines.push(square.slice(r * 5, r * 5 + 5).split('').join(' '));
+    const steps = [{
+        title: `Key Square (${direction === 'encode' ? 'Encode' : 'Decode'})`,
+        content: `Keyword: ${(keyword || '(none)')}\nI and J share a cell.\n\n${gridLines.join('\n')}`
+    }];
+
+    if (!/[A-Za-z]/.test(text)) {
+        return { result: '', steps };
+    }
+
+    const pairs = playfairDigraphs(text);
+    const details = [];
+    let result = '';
+    for (const pair of pairs) {
+        const [r1, c1] = pos(pair[0]);
+        const [r2, c2] = pos(pair[1]);
+        let o1, o2, rule;
+        if (r1 === r2) {
+            o1 = square[r1 * 5 + (c1 + shift) % 5];
+            o2 = square[r2 * 5 + (c2 + shift) % 5];
+            rule = 'same row';
+        } else if (c1 === c2) {
+            o1 = square[((r1 + shift) % 5) * 5 + c1];
+            o2 = square[((r2 + shift) % 5) * 5 + c2];
+            rule = 'same column';
+        } else {
+            o1 = square[r1 * 5 + c2];
+            o2 = square[r2 * 5 + c1];
+            rule = 'rectangle';
+        }
+        result += o1 + o2;
+        details.push(`${pair} → ${o1}${o2} (${rule})`);
+    }
+
+    steps.push({ title: 'Digraph Substitution', content: summarizeSteps(details) });
+    // Group output into readable pairs
+    const grouped = result.match(/.{1,2}/g)?.join(' ') || result;
+    return { result: grouped, steps };
+}
+
+export const Playfair = {
+    encode(text, keyword) {
+        return playfairRun(text, keyword, 'encode');
+    },
+    decode(text, keyword) {
+        // Strip the readability spaces the encoder inserts between pairs.
+        return playfairRun(text.replace(/\s+/g, ''), keyword, 'decode');
+    }
+};
+
+/**
+ * POLYBIUS SQUARE
+ * Each letter → its row+column on a standard 5×5 grid (I/J share cell 24).
+ * Letters become two-digit codes (1–5 each), spaces become "/", other
+ * characters are dropped. Decode reverses it.
+ */
+const POLYBIUS_SQUARE = 'ABCDEFGHIKLMNOPQRSTUVWXYZ'; // no J
+
+export const Polybius = {
+    encode(text, _param, retainPunctuation) {
+        const steps = [{
+            title: 'Polybius Grid',
+            content: '    1 2 3 4 5\n1 | A B C D E\n2 | F G H I K\n3 | L M N O P\n4 | Q R S T U\n5 | V W X Y Z\n\nI and J share cell 24. Word breaks shown as "/".'
+        }];
+        const tokens = [];
+        const details = [];
+        for (const raw of text) {
+            const c = raw.toUpperCase() === 'J' ? 'I' : raw.toUpperCase();
+            const idx = POLYBIUS_SQUARE.indexOf(c);
+            if (idx !== -1) {
+                const code = `${Math.floor(idx / 5) + 1}${idx % 5 + 1}`;
+                tokens.push(code);
+                details.push(`'${raw}' → ${code}`);
+            } else if (raw === ' ') {
+                tokens.push('/');
+                details.push('space → /');
+            } else {
+                details.push(`'${raw}' skipped`);
+            }
+        }
+        steps.push({ title: 'Character Encoding', content: summarizeSteps(details) });
+        return { result: tokens.join(' '), steps };
+    },
+
+    decode(text, _param, retainPunctuation) {
+        const steps = [{
+            title: 'Polybius Grid',
+            content: 'Row-column pairs (1–5) map back to letters; "/" is a word break. J decodes as I.'
+        }];
+        const details = [];
+        let result = '';
+        const tokens = text.trim().split(/\s+/);
+        if (tokens.length === 1 && tokens[0] === '') {
+            return { result: '', steps: [{ title: 'Status', content: 'No Polybius codes found.' }] };
+        }
+        for (const token of tokens) {
+            if (token === '/') {
+                result += ' ';
+                details.push('/ → space');
+            } else if (/^[1-5][1-5]$/.test(token)) {
+                const idx = (parseInt(token[0], 10) - 1) * 5 + (parseInt(token[1], 10) - 1);
+                const letter = POLYBIUS_SQUARE[idx];
+                result += letter;
+                details.push(`${token} → '${letter}'`);
+            } else {
+                result += '?';
+                details.push(`'${token}' invalid → '?'`);
+            }
+        }
+        steps.push({ title: 'Code Translation', content: summarizeSteps(details) });
+        return { result, steps };
+    }
+};
+
+/**
+ * BACON'S CIPHER (26-letter)
+ * Each letter → a 5-bit A/B pattern (its 0–25 index in binary, A = 0, B = 1).
+ * Spaces become "/", other characters are dropped. Decode reverses it.
+ */
+export const Bacon = {
+    encode(text, _param, retainPunctuation) {
+        const steps = [{
+            title: "Baconian Encoding",
+            content: 'Each letter becomes a 5-symbol A/B group: its position (A=0…Z=25) in 5-bit binary, with A for 0 and B for 1. Word breaks shown as "/".'
+        }];
+        const tokens = [];
+        const details = [];
+        for (const raw of text) {
+            const idx = getAlphabetIndex(raw);
+            if (idx !== -1) {
+                const group = idx.toString(2).padStart(5, '0').replace(/0/g, 'A').replace(/1/g, 'B');
+                tokens.push(group);
+                details.push(`'${raw}' (${idx}) → ${group}`);
+            } else if (raw === ' ') {
+                tokens.push('/');
+                details.push('space → /');
+            } else {
+                details.push(`'${raw}' skipped`);
+            }
+        }
+        steps.push({ title: 'Character Encoding', content: summarizeSteps(details) });
+        return { result: tokens.join(' '), steps };
+    },
+
+    decode(text, _param, retainPunctuation) {
+        const steps = [{
+            title: "Baconian Decoding",
+            content: 'Each 5-symbol A/B group is read as 5-bit binary (A=0, B=1) → a letter. "/" is a word break.'
+        }];
+        const details = [];
+        let result = '';
+        const tokens = text.trim().toUpperCase().split(/\s+/);
+        if (tokens.length === 1 && tokens[0] === '') {
+            return { result: '', steps: [{ title: 'Status', content: 'No Baconian groups found.' }] };
+        }
+        for (const token of tokens) {
+            if (token === '/') {
+                result += ' ';
+                details.push('/ → space');
+            } else if (/^[AB]{5}$/.test(token)) {
+                const idx = parseInt(token.replace(/A/g, '0').replace(/B/g, '1'), 2);
+                const letter = getLetterFromIndex(idx, true);
+                result += letter;
+                details.push(`${token} → '${letter}'`);
+            } else {
+                result += '?';
+                details.push(`'${token}' invalid → '?'`);
+            }
+        }
+        steps.push({ title: 'Group Translation', content: summarizeSteps(details) });
+        return { result, steps };
+    }
+};
+
+/**
  * 5. RAIL FENCE CIPHER
  */
 export const RailFence = {

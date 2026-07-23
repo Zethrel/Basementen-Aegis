@@ -36,6 +36,12 @@ export const elements = {
     caesarbruteSliderGroup: document.getElementById('caesarbrute-slider-group'),
     vigenereKey: document.getElementById('vigenere-key'),
     vigenereError: document.getElementById('vigenere-error'),
+    affineA: document.getElementById('affine-a'),
+    affineB: document.getElementById('affine-b'),
+    affineBValue: document.getElementById('affine-b-value'),
+    affineBDown: document.getElementById('affine-b-down'),
+    affineBUp: document.getElementById('affine-b-up'),
+    playfairKey: document.getElementById('playfair-key'),
     railfenceRails: document.getElementById('railfence-rails'),
     railfenceError: document.getElementById('railfence-error'),
     

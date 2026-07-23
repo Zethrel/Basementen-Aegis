@@ -108,6 +108,49 @@
                             <span class="param-error" id="vigenere-error" role="alert"></span>
                         </div>
 
+                        <!-- Affine a & b -->
+                        <div class="param-group" id="param-affine">
+                            <div class="param-subfield">
+                                <label for="affine-a">Multiplier a (coprime with 26):</label>
+                                <select id="affine-a" class="select-dropdown">
+                                    <option value="1">1</option>
+                                    <option value="3">3</option>
+                                    <option value="5" selected>5</option>
+                                    <option value="7">7</option>
+                                    <option value="9">9</option>
+                                    <option value="11">11</option>
+                                    <option value="15">15</option>
+                                    <option value="17">17</option>
+                                    <option value="19">19</option>
+                                    <option value="21">21</option>
+                                    <option value="23">23</option>
+                                    <option value="25">25</option>
+                                </select>
+                            </div>
+                            <div>
+                                <label for="affine-b">Shift b (0-25): <span id="affine-b-value">8</span></label>
+                                <div class="shift-control-row">
+                                    <button type="button" class="nudge-btn" id="affine-b-down" aria-label="Decrease b by 1">&minus;</button>
+                                    <input type="range" id="affine-b" min="0" max="25" value="8" class="range-slider">
+                                    <button type="button" class="nudge-btn" id="affine-b-up" aria-label="Increase b by 1">+</button>
+                                </div>
+                            </div>
+                            <div class="param-info">
+                                <p class="param-info-title"><i data-lucide="info"></i> Affine Guide</p>
+                                <p>Each letter x becomes (a·x + b) mod 26. Only values of <em>a</em> that are coprime with 26 can be reversed, so the list is limited to those. Caesar is the special case a = 1.</p>
+                            </div>
+                        </div>
+
+                        <!-- Playfair Keyword -->
+                        <div class="param-group" id="param-playfair">
+                            <label for="playfair-key">Keyword:</label>
+                            <input type="text" id="playfair-key" value="MONARCHY" placeholder="Letters only" maxlength="30" class="input-text">
+                            <div class="param-info">
+                                <p class="param-info-title"><i data-lucide="info"></i> Playfair Guide</p>
+                                <p>A 5×5 keyword square encrypts letter pairs (I and J share a cell). Doubled letters are split and an odd final letter is padded with X, so non-letters are dropped and decoded text keeps that padding.</p>
+                            </div>
+                        </div>
+
                         <!-- Rail Fence Key -->
                         <div class="param-group" id="param-railfence">
                             <label for="railfence-rails">Number of Rails (2-10):</label>

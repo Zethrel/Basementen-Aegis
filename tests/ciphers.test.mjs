@@ -14,6 +14,10 @@ import {
     Rot13,
     Atbash,
     Vigenere,
+    Affine,
+    Playfair,
+    Polybius,
+    Bacon,
     RailFence,
     BinaryConverter,
     A1z26,
@@ -107,6 +111,54 @@ test('Vigenere: classic known value and round trip', () => {
     assertShape(enc);
     assert.equal(enc.result, 'LXFOPVEFRNHR');
     assert.equal(Vigenere.decode(enc.result, 'LEMON', true).result, 'ATTACKATDAWN');
+});
+
+test('Affine: canonical known value (a=5, b=8) and round trip', () => {
+    const enc = Affine.encode('AFFINE CIPHER', 5, 8, true);
+    assertShape(enc);
+    assert.equal(enc.result, 'IHHWVC SWFRCP');
+    assert.equal(Affine.decode(enc.result, 5, 8, true).result, 'AFFINE CIPHER');
+});
+
+test('Affine: a=1 reduces to a Caesar shift of b', () => {
+    assert.equal(Affine.encode('abc', 1, 3, true).result, Caesar.encode('abc', 3, 'en', true).result);
+});
+
+test('Affine: non-coprime "a" is rejected with an error step', () => {
+    const out = Affine.encode('abc', 2, 1, true); // 2 shares a factor with 26
+    assert.equal(out.result, '');
+    assert.equal(out.steps[0].title, 'Error');
+});
+
+test('Playfair: builds the square and round trips (with X padding)', () => {
+    const enc = Playfair.encode('instruments', 'MONARCHY');
+    assertShape(enc);
+    assert.equal(enc.result.replace(/\s/g, ''), 'GATLMZCLRQXA');
+    // Decode recovers the padded, J-folded uppercase plaintext
+    assert.equal(Playfair.decode(enc.result, 'MONARCHY').result.replace(/\s/g, ''), 'INSTRUMENTSX');
+});
+
+test('Playfair: I and J share a cell', () => {
+    // "JET" folds J→I, so it encodes identically to "IET"
+    assert.equal(Playfair.encode('JET', 'KEY').result, Playfair.encode('IET', 'KEY').result);
+});
+
+test('Polybius: known value, word breaks, and round trip', () => {
+    const enc = Polybius.encode('Hi', null, true);
+    assertShape(enc);
+    assert.equal(enc.result, '23 24');
+    assert.equal(Polybius.decode(Polybius.encode('Hello World', null, true).result, null, true).result,
+        'HELLO WORLD');
+    assert.equal(Polybius.decode('66', null, true).result, '?'); // out-of-range code
+});
+
+test('Bacon: 5-bit A/B groups, word breaks, and round trip', () => {
+    const enc = Bacon.encode('AB', null, true);
+    assertShape(enc);
+    assert.equal(enc.result, 'AAAAA AAAAB'); // A=0, B=1
+    assert.equal(Bacon.decode(Bacon.encode('Hi There', null, true).result, null, true).result,
+        'HI THERE');
+    assert.equal(Bacon.decode('ABABA', null, true).result, 'K'); // 01010b = 10 = K
 });
 
 test('Rail Fence: known value and round trips for rails 2-5', () => {

@@ -16,7 +16,7 @@ Created by Zethrel.
 
 > **Important:** Every cipher in this application is included for learning, puzzles, and fun between friends. They are classic and historical ciphers — not secure encryption — and should never be relied on to protect sensitive information.
 
-Caesar (English or Danish/Norwegian/Swedish alphabets) · ROT13 · Atbash · Vigenère · Rail Fence · Binary Converter · A1Z26 (English or Scandinavian alphabets) · Binary Reverse (custom) · Elder Futhark runes · Morse code (with Æ/Ø/Å) · Anagram Helper · Caesar Brute Force helper (cracks unknown shifts, English or Scandinavian alphabets)
+Caesar (English or Danish/Norwegian/Swedish alphabets) · ROT13 · Atbash · Vigenère · Affine · Playfair · Polybius square · Bacon's cipher · Rail Fence · Binary Converter · A1Z26 (English or Scandinavian alphabets) · Binary Reverse (custom) · Elder Futhark runes · Morse code (with Æ/Ø/Å) · Anagram Helper · Caesar Brute Force helper (cracks unknown shifts, English or Scandinavian alphabets)
 
 ## Features
 

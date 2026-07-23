@@ -7,6 +7,10 @@ import {
     Rot13,
     Atbash,
     Vigenere,
+    Affine,
+    Playfair,
+    Polybius,
+    Bacon,
     RailFence,
     BinaryConverter,
     A1z26,
@@ -47,9 +51,25 @@ export const CIPHERS = [
         }
     },
     {
+        id: 'affine', name: 'Affine Cipher', shortName: 'Affine', icon: 'function-square', paramGroup: 'param-affine',
+        run: (input, mode, opts) => {
+            const a = parseInt(elements.affineA.value, 10);
+            const b = parseInt(elements.affineB.value, 10);
+            return mode === 'encode'
+                ? Affine.encode(input, a, b, opts.retainPunctuation)
+                : Affine.decode(input, a, b, opts.retainPunctuation);
+        }
+    },
+    {
         id: 'anagram', name: 'Anagram Helper', shortName: 'Anagram', icon: 'shuffle',
         badge: { text: 'Helper', className: 'badge-helper' }, paramGroup: 'param-anagram',
         modeless: true
+    },
+    {
+        id: 'bacon', name: "Bacon's Cipher", shortName: 'Bacon', icon: 'binary', paramGroup: 'param-none',
+        run: (input, mode, opts) => mode === 'encode'
+            ? Bacon.encode(input, null, opts.retainPunctuation)
+            : Bacon.decode(input, null, opts.retainPunctuation)
     },
     {
         id: 'atbash', name: 'Atbash Cipher', shortName: 'Atbash', icon: 'shuffle', paramGroup: 'param-none',
@@ -115,6 +135,21 @@ export const CIPHERS = [
         run: (input, mode, opts) => mode === 'encode'
             ? Morse.encode(input, null, opts.retainPunctuation)
             : Morse.decode(input, null, opts.retainPunctuation)
+    },
+    {
+        id: 'playfair', name: 'Playfair Cipher', shortName: 'Playfair', icon: 'grid-3x3', paramGroup: 'param-playfair',
+        run: (input, mode) => {
+            const keyword = elements.playfairKey.value;
+            return mode === 'encode'
+                ? Playfair.encode(input, keyword)
+                : Playfair.decode(input, keyword);
+        }
+    },
+    {
+        id: 'polybius', name: 'Polybius Square', shortName: 'Polybius', icon: 'grid-3x3', paramGroup: 'param-none',
+        run: (input, mode, opts) => mode === 'encode'
+            ? Polybius.encode(input, null, opts.retainPunctuation)
+            : Polybius.decode(input, null, opts.retainPunctuation)
     },
     {
         id: 'railfence', name: 'Rail Fence', shortName: 'Rail Fence', icon: 'rows', paramGroup: 'param-railfence',
