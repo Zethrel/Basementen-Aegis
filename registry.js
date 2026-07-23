@@ -11,6 +11,8 @@ import {
     Playfair,
     Polybius,
     Bacon,
+    Columnar,
+    Scytale,
     RailFence,
     BinaryConverter,
     A1z26,
@@ -115,6 +117,15 @@ export const CIPHERS = [
         }
     },
     {
+        id: 'columnar', name: 'Columnar Transposition', shortName: 'Columnar', icon: 'columns-3', paramGroup: 'param-columnar',
+        run: (input, mode) => {
+            const keyword = elements.columnarKey.value;
+            return mode === 'encode'
+                ? Columnar.encode(input, keyword)
+                : Columnar.decode(input, keyword);
+        }
+    },
+    {
         id: 'caesar', name: 'Caesar Cipher', shortName: 'Caesar', icon: 'key-round', paramGroup: 'param-caesar',
         run: (input, mode, opts) => {
             const shift = parseInt(elements.caesarShift.value, 10);
@@ -172,6 +183,15 @@ export const CIPHERS = [
         run: (input, mode, opts) => mode === 'encode'
             ? Rot13.encode(input, null, opts.retainPunctuation)
             : Rot13.decode(input, null, opts.retainPunctuation)
+    },
+    {
+        id: 'scytale', name: 'Scytale', shortName: 'Scytale', icon: 'scroll-text', paramGroup: 'param-scytale',
+        run: (input, mode) => {
+            const cols = parseInt(elements.scytaleCols.value, 10);
+            return mode === 'encode'
+                ? Scytale.encode(input, cols)
+                : Scytale.decode(input, cols);
+        }
     },
     {
         id: 'vigenere', name: 'Vigenere Cipher', shortName: 'Vigenere', icon: 'keyboard', paramGroup: 'param-vigenere',

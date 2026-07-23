@@ -188,6 +188,30 @@
                             </div>
                         </div>
 
+                        <!-- Columnar Transposition Keyword -->
+                        <div class="param-group" id="param-columnar">
+                            <label for="columnar-key">Keyword:</label>
+                            <input type="text" id="columnar-key" value="ZEBRA" placeholder="At least 2 characters" maxlength="30" class="input-text">
+                            <div class="param-info">
+                                <p class="param-info-title"><i data-lucide="info"></i> Columnar Guide</p>
+                                <p>The message is written in rows under the keyword, then the columns are read out in the alphabetical order of the keyword's letters. Every character — including spaces and Æ/Ø/Å — is moved as-is, so it reverses exactly.</p>
+                            </div>
+                        </div>
+
+                        <!-- Scytale Columns -->
+                        <div class="param-group" id="param-scytale">
+                            <label for="scytale-cols">Columns / rod size (2-12): <span id="scytale-cols-value">4</span></label>
+                            <div class="shift-control-row">
+                                <button type="button" class="nudge-btn" id="scytale-cols-down" aria-label="Decrease columns by 1">&minus;</button>
+                                <input type="range" id="scytale-cols" min="2" max="12" value="4" class="range-slider">
+                                <button type="button" class="nudge-btn" id="scytale-cols-up" aria-label="Increase columns by 1">+</button>
+                            </div>
+                            <div class="param-info">
+                                <p class="param-info-title"><i data-lucide="info"></i> Scytale Guide</p>
+                                <p>The ancient rod cipher: write the message across this many columns, then read down each column. A keyless transposition, so any character round-trips exactly.</p>
+                            </div>
+                        </div>
+
                         <!-- Rail Fence Key -->
                         <div class="param-group" id="param-railfence">
                             <label for="railfence-rails">Number of Rails (2-10):</label>

@@ -19,6 +19,8 @@ import {
     Playfair,
     Polybius,
     Bacon,
+    Columnar,
+    Scytale,
     RailFence,
     BinaryConverter,
     A1z26,
@@ -188,6 +190,33 @@ test('Bacon: 5-bit A/B groups, word breaks, and round trip', () => {
 test('Bacon: Scandinavian letters use the 32-pattern space and round trip', () => {
     assert.equal(Bacon.encode('Å', 'dk-no').result, 'BBBAA'); // index 28 = 11100b
     assert.equal(Bacon.decode(Bacon.encode('Höst på ön', 'se').result, 'se').result, 'HÖST PÅ ÖN');
+});
+
+test('Columnar transposition: canonical value and exact round trip', () => {
+    const enc = Columnar.encode('WEAREDISCOVEREDFLEEATONCE', 'ZEBRAS');
+    assertShape(enc);
+    assert.equal(enc.result, 'EVLNACDTESEAROFODEECWIREE');
+    assert.equal(Columnar.decode(enc.result, 'ZEBRAS').result, 'WEAREDISCOVEREDFLEEATONCE');
+});
+
+test('Columnar: transposes spaces, punctuation, and Scandinavian letters intact', () => {
+    for (const text of ['attack at dawn, hold!', 'Blåbær grød og øl']) {
+        const enc = Columnar.encode(text, 'NØKKEL');
+        assert.equal(Columnar.decode(enc.result, 'NØKKEL').result, text);
+    }
+    // Short keyword is rejected
+    assert.equal(Columnar.encode('abc', 'A').steps[0].title, 'Error');
+});
+
+test('Scytale: keyless transposition round trips exactly (incl. Scandinavian)', () => {
+    for (const text of ['HELLO WORLD FROM THE ROD', 'Blåbær grød']) {
+        for (const cols of [3, 4, 5]) {
+            const enc = Scytale.encode(text, cols);
+            assertShape(enc);
+            assert.equal(Scytale.decode(enc.result, cols).result, text,
+                `scytale round trip failed for ${cols} cols`);
+        }
+    }
 });
 
 test('Rail Fence: known value and round trips for rails 2-5', () => {

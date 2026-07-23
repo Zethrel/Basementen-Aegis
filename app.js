@@ -491,6 +491,17 @@ function bindEvents() {
     elements.polybiusVariant.addEventListener('change', () => runConversion());
     elements.baconVariant.addEventListener('change', () => runConversion());
 
+    // Columnar keyword
+    elements.columnarKey.addEventListener('input', () => scheduleConversion());
+
+    // Scytale columns slider
+    elements.scytaleCols.addEventListener('input', (e) => {
+        elements.scytaleColsValue.textContent = e.target.value;
+        scheduleConversion(50);
+    });
+    elements.scytaleColsDown.addEventListener('click', () => nudgeSlider(elements.scytaleCols, -1));
+    elements.scytaleColsUp.addEventListener('click', () => nudgeSlider(elements.scytaleCols, 1));
+
     // Rail Fence Rails input
     elements.railfenceRails.addEventListener('input', () => {
         scheduleConversion();

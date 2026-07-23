@@ -608,6 +608,128 @@ export const Bacon = {
 };
 
 /**
+ * COLUMNAR TRANSPOSITION
+ * Write the message into rows under the keyword, then read the columns in the
+ * order given by the keyword letters' alphabetical rank (ties left→right).
+ * Alphabet-agnostic — every character (letters, spaces, punctuation, Æ/Ø/Å…)
+ * is transposed as-is, so it round-trips exactly.
+ */
+function columnOrder(keyword) {
+    return keyword
+        .split('')
+        .map((ch, idx) => ({ ch, idx }))
+        .sort((a, b) => (a.ch < b.ch ? -1 : a.ch > b.ch ? 1 : a.idx - b.idx))
+        .map((o) => o.idx);
+}
+
+// Column c holds cells at indices c, c+w, c+2w, … < n; the first (n mod w)
+// columns get one extra cell (they fill the partial last row).
+function columnHeight(c, n, w) {
+    return Math.floor(n / w) + (c < n % w ? 1 : 0);
+}
+
+export const Columnar = {
+    encode(text, keyword) {
+        const key = (keyword || '').toUpperCase();
+        if (key.length < 2) {
+            return { result: '', steps: [{ title: 'Error', content: 'Enter a keyword of at least 2 characters.' }] };
+        }
+        const w = key.length, n = text.length;
+        const order = columnOrder(key);
+        let result = '';
+        const details = [];
+        for (const c of order) {
+            let col = '';
+            for (let r = c; r < n; r += w) col += text[r];
+            result += col;
+            details.push(`Column ${c + 1} ('${key[c]}'): "${col}"`);
+        }
+        const rows = Math.ceil(n / w);
+        const grid = [];
+        for (let r = 0; r < rows; r++) grid.push(text.slice(r * w, r * w + w));
+        const steps = [
+            { title: 'Configuration', content: `Keyword: ${key}\nColumns: ${w}\nRead order (by letter rank): ${order.map((c) => c + 1).join(' ')}` },
+            { title: 'Grid (row by row)', content: summarizeSteps(grid) },
+            { title: 'Columns read in key order', content: summarizeSteps(details) }
+        ];
+        return { result, steps };
+    },
+    decode(text, keyword) {
+        const key = (keyword || '').toUpperCase();
+        if (key.length < 2) {
+            return { result: '', steps: [{ title: 'Error', content: 'Enter a keyword of at least 2 characters.' }] };
+        }
+        const w = key.length, n = text.length;
+        const order = columnOrder(key);
+        const cols = [];
+        let pos = 0;
+        for (const c of order) {
+            const h = columnHeight(c, n, w);
+            cols[c] = text.slice(pos, pos + h);
+            pos += h;
+        }
+        let result = '';
+        const rows = Math.ceil(n / w);
+        for (let r = 0; r < rows; r++) {
+            for (let c = 0; c < w; c++) {
+                if (cols[c] && r < cols[c].length) result += cols[c][r];
+            }
+        }
+        return { result, steps: [{ title: 'Configuration', content: `Keyword: ${key}\nColumns: ${w}\nRead order: ${order.map((c) => c + 1).join(' ')}` }] };
+    }
+};
+
+/**
+ * SCYTALE
+ * The ancient rod cipher: write the message across a fixed number of columns
+ * (the rod's circumference), then read down the columns. A keyless
+ * transposition — like Columnar, it round-trips every character exactly.
+ */
+export const Scytale = {
+    encode(text, cols) {
+        cols = parseInt(cols, 10);
+        if (isNaN(cols) || cols < 2) {
+            return { result: '', steps: [{ title: 'Error', content: 'Number of columns must be at least 2.' }] };
+        }
+        const n = text.length;
+        let result = '';
+        for (let c = 0; c < cols; c++) {
+            for (let r = c; r < n; r += cols) result += text[r];
+        }
+        const rows = Math.ceil(n / cols);
+        const grid = [];
+        for (let r = 0; r < rows; r++) grid.push(text.slice(r * cols, r * cols + cols));
+        const steps = [
+            { title: 'Configuration', content: `Columns (rod size): ${cols}\nWrite across ${cols} columns, then read down each column in turn.` },
+            { title: 'Grid (row by row)', content: summarizeSteps(grid) }
+        ];
+        return { result, steps };
+    },
+    decode(text, cols) {
+        cols = parseInt(cols, 10);
+        if (isNaN(cols) || cols < 2) {
+            return { result: '', steps: [{ title: 'Error', content: 'Number of columns must be at least 2.' }] };
+        }
+        const n = text.length;
+        const colStr = [];
+        let pos = 0;
+        for (let c = 0; c < cols; c++) {
+            const h = columnHeight(c, n, cols);
+            colStr[c] = text.slice(pos, pos + h);
+            pos += h;
+        }
+        let result = '';
+        const rows = Math.ceil(n / cols);
+        for (let r = 0; r < rows; r++) {
+            for (let c = 0; c < cols; c++) {
+                if (r < colStr[c].length) result += colStr[c][r];
+            }
+        }
+        return { result, steps: [{ title: 'Configuration', content: `Columns (rod size): ${cols}` }] };
+    }
+};
+
+/**
  * 5. RAIL FENCE CIPHER
  */
 export const RailFence = {
